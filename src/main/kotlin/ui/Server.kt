@@ -42,8 +42,10 @@ import io.ktor.auth.Authentication
 import io.ktor.auth.UserIdPrincipal
 import io.ktor.auth.authenticate
 import io.ktor.auth.basic
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.cio.websocket.send
-import io.ktor.response.respond
+import io.ktor.response.respondText
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.ApplicationEngineEnvironment
@@ -323,7 +325,7 @@ private fun Application.extracted(
 
             get("/session") {
                 val sessionInfoData = reader.readSessionInfoData()
-                call.respond(Json.encodeToString(sessionInfoData))
+                call.respondText(Json.encodeToString(sessionInfoData), ContentType.parse("application/json"), HttpStatusCode.OK)
             }
         }
     }
