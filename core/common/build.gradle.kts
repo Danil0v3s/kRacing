@@ -11,9 +11,9 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.2")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.2")
+    implementation(libs.kotlinx.serialization)
+    implementation(libs.jackson.module)
+    implementation(libs.jackson.dataformat)
 }
 
 tasks.test {

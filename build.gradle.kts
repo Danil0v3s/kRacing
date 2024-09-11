@@ -1,9 +1,10 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.libsDirectory
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.9.0"
-    kotlin("plugin.serialization") version "1.9.0"
+    kotlin("jvm") version libs.versions.kotlin
+    kotlin("plugin.serialization") version libs.versions.kotlin
     id("org.jetbrains.compose") version "1.4.3"
     id("com.diffplug.spotless") version "6.1.0"
 }
@@ -18,23 +19,23 @@ repositories {
 }
 
 dependencies {
-    implementation("io.ktor:ktor-server-netty:1.6.7")
-    implementation("io.ktor:ktor-websockets:1.6.7")
-    implementation("io.ktor:ktor-serialization:1.6.7")
-    implementation("io.ktor:ktor-server-core:1.6.7")
-    implementation("io.ktor:ktor-auth:1.6.7")
+    implementation(libs.ktor.auth)
+    implementation(libs.ktor.serialization)
+    implementation(libs.ktor.server)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.websockets)
 
-    implementation("ch.qos.logback:logback-classic:1.4.7")
+    implementation(libs.logback)
 
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.2")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.11.2")
+    implementation(libs.kotlinx.serialization)
+    implementation(libs.jackson.module)
+    implementation(libs.jackson.dataformat)
 
     implementation(compose.desktop.currentOs)
-    implementation("org.jetbrains.compose.material:material-icons-extended-desktop:1.3.1")
+    implementation(libs.compose.material.icons)
 
-    implementation(project(":core:common"))
-    implementation(project(":core:native"))
+    implementation(projects.core.common)
+    implementation(projects.core.native)
 }
 
 tasks.withType<KotlinCompile> {
