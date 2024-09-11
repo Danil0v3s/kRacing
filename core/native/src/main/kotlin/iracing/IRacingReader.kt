@@ -37,8 +37,9 @@ object MAHMSizes {
 
 private const val YML_MAP_FILE_NAME = "Local\\IRSDKMemMapFileName"
 private const val EVENTS_MAP_FILE_NAME = "Local\\IRSDKDataValidEvent"
+private const val SESSION_EMIT_DELAY = 30_000L
 
-class Reader {
+class IRacingReader {
 
     private val windowsService = WindowsService()
     private var pollingJob: Job? = null
@@ -46,7 +47,7 @@ class Reader {
     private var memoryMapFile: WinNT.HANDLE? = null
     private var pointer: Pointer? = null
 
-    private var header: Header? = null
+    private var header: IRacingDataHeader? = null
 
     private val yamlParser by lazy {
         ObjectMapper(YAMLFactory()).apply {
@@ -56,15 +57,22 @@ class Reader {
     }
 
     var pollingInterval = 200L
-    val currentData = flow<Data?> {
+    private var accumulator = 0L
+    val currentData = flow<IRacingData?> {
         tryOpenMemoryFile()
 
         pointer ?: return@flow
 
         while (true) {
             try {
-                emit(readData(pointer!!))
+                if (accumulator <= 0) {
+                    emit(readSessionInfoData())
+                    accumulator = SESSION_EMIT_DELAY
+                }
+
+                emit(readTelemetryData(pointer!!))
                 delay(pollingInterval)
+                accumulator -= pollingInterval
             } catch (e: CancellationException) {
                 break
             }
@@ -86,34 +94,37 @@ class Reader {
         } ?: throw Error("Could not read MAHMSharedMemory")
     }
 
-    fun readSessionInfoData(): SessionInfoData? {
-        if (header == null || pointer == null) {
-            tryOpenMemoryFile()
-            this.header = readHeader(pointer!!)
-        }
-
-        return readSessionInfoData(getByteBuffer(pointer!!, header!!.sessionInfoLen, header!!.sessionInfoOffset))
-    }
-
-    private fun readHeader(pointer: Pointer): Header {
-        val buffer = getByteBuffer(pointer, Header.HEADER_SIZE)
+    private fun readHeader(pointer: Pointer): IRacingDataHeader {
+        val buffer = getByteBuffer(pointer, IRacingDataHeader.HEADER_SIZE)
 
         return readHeader(buffer)
     }
 
-    private fun readData(pointer: Pointer): Data {
+    private fun readTelemetryData(pointer: Pointer): IRacingData.Telemetry {
         val header = readHeader(pointer)
         this.header = header
         val latestPointerBuffer = header.getLatestVarByteBuffer(pointer)
         val telemetryData = readTelemetryData(header, pointer, latestPointerBuffer)
 
-        return Data(
-            telemetry = telemetryData
+        return IRacingData.Telemetry(
+            data = telemetryData
+        )
+    }
+
+    private fun readSessionInfoData(): IRacingData.Session {
+        if (header == null || pointer == null) {
+            tryOpenMemoryFile()
+            this.header = readHeader(pointer!!)
+        }
+        val sessionInfoData = readSessionInfoData(getByteBuffer(pointer!!, header!!.sessionInfoLen, header!!.sessionInfoOffset))
+
+        return IRacingData.Session(
+            data = sessionInfoData
         )
     }
 
     private fun readTelemetryData(
-        header: Header,
+        header: IRacingDataHeader,
         pointer: Pointer,
         latestPointerBuffer: ByteBuffer
     ): MutableMap<String, TelemetryData> {
@@ -177,7 +188,7 @@ class Reader {
         return buffer
     }
 
-    private fun readHeader(buffer: ByteBuffer) = Header(
+    private fun readHeader(buffer: ByteBuffer) = IRacingDataHeader(
         version = buffer.int,
         status = buffer.int,
         tickRate = buffer.int,

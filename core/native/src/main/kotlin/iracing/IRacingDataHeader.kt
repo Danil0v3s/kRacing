@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 @Serializable
-data class Header(
+data class IRacingDataHeader(
     val version: Int,
     val status: Int,
     val tickRate: Int,

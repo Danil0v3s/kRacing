@@ -7,18 +7,18 @@ import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import iracing.Reader
+import iracing.IRacingReader
 import ui.FooterUi
 import ui.ServerUi
 import ui.SettingsUi
 
 @Composable
 fun App(
-    reader: Reader = Reader()
+    IRacingReader: IRacingReader = IRacingReader()
 ) = MaterialTheme {
     Row(modifier = Modifier.fillMaxSize()) {
         Column {
-            ServerUi(reader)
+            ServerUi(IRacingReader)
             Divider()
             SettingsUi()
             FooterUi()

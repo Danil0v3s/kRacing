@@ -18,8 +18,6 @@ repositories {
 }
 
 dependencies {
-    implementation("net.java.dev.jna:jna-platform:5.12.1")
-
     implementation("io.ktor:ktor-server-netty:1.6.7")
     implementation("io.ktor:ktor-websockets:1.6.7")
     implementation("io.ktor:ktor-serialization:1.6.7")
@@ -34,10 +32,13 @@ dependencies {
 
     implementation(compose.desktop.currentOs)
     implementation("org.jetbrains.compose.material:material-icons-extended-desktop:1.3.1")
+
+    implementation(project(":core:common"))
+    implementation(project(":core:native"))
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "18"
+    kotlinOptions.jvmTarget = "20"
 }
 
 sourceSets {

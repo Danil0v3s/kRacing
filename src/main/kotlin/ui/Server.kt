@@ -36,17 +36,12 @@ import androidx.compose.ui.unit.dp
 import io.ktor.application.Application
 import io.ktor.application.ApplicationStarted
 import io.ktor.application.ApplicationStopped
-import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.auth.Authentication
 import io.ktor.auth.UserIdPrincipal
 import io.ktor.auth.authenticate
 import io.ktor.auth.basic
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.cio.websocket.send
-import io.ktor.response.respondText
-import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.ApplicationEngineEnvironment
 import io.ktor.server.engine.EngineConnectorConfig
@@ -55,7 +50,8 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.netty.NettyApplicationEngine
 import io.ktor.websocket.WebSockets
 import io.ktor.websocket.webSocket
-import iracing.Reader
+import iracing.IRacingData
+import iracing.IRacingReader
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -76,7 +72,7 @@ sealed class ServerEvent {
 
 @Composable
 fun ServerUi(
-    reader: Reader
+    reader: IRacingReader
 ) {
     var state by remember { mutableStateOf(ServerState()) }
     fun updateState(serverEvent: ServerEvent) {
@@ -272,7 +268,7 @@ fun DropdownMenu(
 }
 
 private fun createServer(
-    reader: Reader,
+    reader: IRacingReader,
     options: ServerState,
     onServerEvent: (ServerEvent) -> Unit
 ): NettyApplicationEngine {
@@ -283,7 +279,7 @@ private fun createServer(
 
 private fun Application.extracted(
     options: ServerState,
-    reader: Reader,
+    reader: IRacingReader,
     onServerEvent: (ServerEvent) -> Unit
 ) {
     install(WebSockets)
@@ -302,30 +298,25 @@ private fun Application.extracted(
     routing {
         authenticate("auth-basic") {
             webSocket("/telemetry") {
-                reader.currentData.filterNotNull().collect {
+                reader.currentData.filterNotNull().collect { data ->
                     val queryParams = call.request.queryParameters
                     val filters = queryParams["filter"]?.split(",").orEmpty()
 
                     val result = when {
-                        filters.isNotEmpty() -> {
-                            val result = it.copy(
-                                telemetry = it.telemetry.filter { telemetryData ->
+                        filters.isNotEmpty() && data is IRacingData.Telemetry -> {
+                            val result = data.copy(
+                                data = data.data.filter { telemetryData ->
                                     filters.contains(telemetryData.key)
                                 }
                             )
                             Json.encodeToString(result)
                         }
 
-                        else -> Json.encodeToString(it)
+                        else -> Json.encodeToString(data)
                     }
 
                     send(result)
                 }
-            }
-
-            get("/session") {
-                val sessionInfoData = reader.readSessionInfoData()
-                call.respondText(Json.encodeToString(sessionInfoData), ContentType.parse("application/json"), HttpStatusCode.OK)
             }
         }
     }
