@@ -55,7 +55,7 @@ import iracing.IRacingReader
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import repository.PreferencesRepository
+import PreferencesRepository
 
 data class ServerState(
     val isRunning: Boolean = false,

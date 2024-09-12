@@ -41,10 +41,6 @@ sourceSets {
     }
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "20"
-}
-
 compose.desktop {
     application {
         mainClass = "ClientMainKt"

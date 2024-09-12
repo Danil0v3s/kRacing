@@ -1,5 +1,3 @@
-package repository
-
 import java.util.prefs.Preferences
 
 object PreferencesRepository {

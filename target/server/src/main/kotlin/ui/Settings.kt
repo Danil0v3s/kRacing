@@ -22,7 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import repository.PreferencesRepository
+import PreferencesRepository
 import win32.WinRegistry
 
 const val PREFERENCE_AUTO_START_SERVER = "PREFERENCE_AUTO_START_SERVER"

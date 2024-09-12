@@ -9,7 +9,6 @@ import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import repository.PreferencesRepository
 import ui.PREFERENCE_START_MINIMIZED
 import ui.app.App
 
