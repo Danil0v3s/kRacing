@@ -30,7 +30,6 @@ Here is a list, as of 11/03/2015 of all the live and disk based telemetry parame
 | FuelLevelPct                    | %                    | float    | 1    | 1    | Percent fuel remaining                                             |
 | FuelPress                       | bar                  | float    | 1    | 1    | Engine fuel pressure                                               |
 | FuelUsePerHour                  | kg/h                 | float    | 1    | 1    | Engine fuel used instantaneous                                     |
-| Name                            | Unit                 | Type     | Disk | Live | Description                                                        |
 | Gear                            |                      | int      | 1    | 1    | -1=reverse,0=neutral,1..n=current gear,1=being written,1=turned on |
 | IsDiskLoggingActive             |                      | bool     | 0    | 1    | 0=disk based telemetry file not being written                      |
 | IsDiskLoggingEnabled            |                      | bool     | 0    | 1    | 0=disk based telemetry turned off                                  |
@@ -62,7 +61,6 @@ Here is a list, as of 11/03/2015 of all the live and disk based telemetry parame
 | LapDist                         | m                    | float    | 1    | 1    | Meters traveled from S/F this lap                                  |
 | LapDistPct                      | %                    | float    | 1    | 1    | Percentage distance around lap                                     |
 | LapLasNLapSeq                   |                      | int      | 1    | 1    | Player num consecutive clean laps completed for N average          |
-| Name                            | Unit                 | Type     | Disk | Live | Description                                                        |
 | LapLastLapTime                  | s                    | float    | 1    | 1    | Players last lap time                                              |
 | LapLastNLapTime                 | s                    | float    | 1    | 1    | Player last N average lap time                                     |
 | Lat                             | deg                  | double   | 1    | 1    | Latitude in decimal degrees                                        |
