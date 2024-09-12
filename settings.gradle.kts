@@ -23,3 +23,5 @@ rootProject.name = "kRacing"
 
 include("core:common")
 include("core:native")
+include("target:client")
+include("target:server")
