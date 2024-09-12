@@ -12,11 +12,10 @@ version = "0.0.1"
 
 dependencies {
     implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.json)
+    implementation(libs.ktor.client.contentNegotiation)
     implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.serialization)
-    implementation(libs.ktor.auth)
-    implementation(libs.ktor.websockets)
+    implementation(libs.ktor.client.serialization.json)
+    implementation(libs.ktor.client.auth)
 
     implementation(libs.kotlinx.collections.immutable)
 
@@ -25,14 +24,6 @@ dependencies {
 
     implementation(projects.core.common)
     implementation(projects.core.native)
-}
-
-sourceSets {
-    main {
-        java {
-            srcDir("src/main/kotlin")
-        }
-    }
 }
 
 compose.desktop {
@@ -44,12 +35,4 @@ compose.desktop {
             packageVersion = "0.0.1"
         }
     }
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-kotlin {
-    jvmToolchain(20)
 }

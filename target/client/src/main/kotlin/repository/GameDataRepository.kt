@@ -2,22 +2,24 @@ package repository
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.features.json.JsonFeature
-import io.ktor.client.features.websocket.WebSockets
-import io.ktor.client.features.websocket.webSocket
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.http.HttpMethod
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.readText
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.websocket.Frame
+import io.ktor.websocket.readText
 import iracing.IRacingData
 import kotlinx.coroutines.flow.flow
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
 object GameDataRepository {
 
     val client = HttpClient(OkHttp) {
         install(WebSockets)
-        install(JsonFeature)
+        install(ContentNegotiation) {
+            json()
+        }
     }
 
     val iRacingData = flow {

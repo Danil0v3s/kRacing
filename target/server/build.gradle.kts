@@ -12,11 +12,11 @@ group = "br.com.firstsoft"
 version = "0.0.1"
 
 dependencies {
-    implementation(libs.ktor.auth)
+    implementation(libs.ktor.server.auth)
     implementation(libs.ktor.serialization)
     implementation(libs.ktor.server)
     implementation(libs.ktor.server.core)
-    implementation(libs.ktor.websockets)
+    implementation(libs.ktor.server.websockets)
 
     implementation(libs.logback)
 
@@ -29,14 +29,6 @@ dependencies {
 
     implementation(projects.core.common)
     implementation(projects.core.native)
-}
-
-sourceSets {
-    main {
-        java {
-            srcDir("src/main/kotlin")
-        }
-    }
 }
 
 compose.desktop {
