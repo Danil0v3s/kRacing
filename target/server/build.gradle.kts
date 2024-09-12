@@ -1,29 +1,22 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.libsDirectory
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
-    id("org.jetbrains.compose")
     id("com.diffplug.spotless")
+    alias(libs.plugins.jetbrainsCompose)
+    alias(libs.plugins.compose.compiler)
 }
 
 group = "br.com.firstsoft"
 version = "0.0.1"
 
-repositories {
-    google()
-    mavenCentral()
-    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-}
-
 dependencies {
-    implementation(libs.ktor.auth)
+    implementation(libs.ktor.server.auth)
     implementation(libs.ktor.serialization)
     implementation(libs.ktor.server)
     implementation(libs.ktor.server.core)
-    implementation(libs.ktor.websockets)
+    implementation(libs.ktor.server.websockets)
 
     implementation(libs.logback)
 
@@ -38,14 +31,6 @@ dependencies {
     implementation(projects.core.native)
 }
 
-sourceSets {
-    main {
-        java {
-            srcDir("src/main/kotlin")
-        }
-    }
-}
-
 compose.desktop {
     application {
         mainClass = "ServerMainKt"
@@ -54,18 +39,5 @@ compose.desktop {
             packageName = "kMonitor Server"
             packageVersion = "0.0.1"
         }
-    }
-}
-
-spotless {
-    format("misc") {
-        target("*.gradle", "*.md", ".gitignore")
-
-        trimTrailingWhitespace()
-        indentWithTabs()
-        endWithNewline()
-    }
-    kotlin {
-        ktlint()
     }
 }
