@@ -1,4 +1,4 @@
-package br.com.firstsoft.target.server
+package br.com.firstsoft.kracing.target.server
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf

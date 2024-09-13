@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
@@ -6,9 +8,6 @@ plugins {
 group = "br.com.firstsoft.kracing"
 version = "0.0.1"
 
-repositories {
-    mavenCentral()
-}
 
 dependencies {
     implementation(libs.diozero.core)
@@ -22,9 +21,14 @@ dependencies {
     implementation(projects.core.common)
 }
 
-tasks.test {
-    useJUnitPlatform()
+tasks.withType<KotlinCompile> {
+    kotlinOptions.jvmTarget = "20"
 }
-kotlin {
-    jvmToolchain(20)
+
+sourceSets {
+    main {
+        java {
+            srcDir("src/main/kotlin")
+        }
+    }
 }
