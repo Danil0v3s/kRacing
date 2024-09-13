@@ -308,6 +308,24 @@
 | AirTemp                         | C                    | Temperature of air at start/finish line                         | 25.548302          |
 | AirPressure                     | Hg                   | Pressure of air at start/finish line                            | 28.98893           |
 | AirDensity                      | kg/m^3               | Density of air at start/finish line                             | 1.1369911          |
+| dpFuelAutoFillEnabled           |                      | Pitstop auto fill fuel system enabled                           | 0.0                |
+| dpFuelAutoFillActive            |                      | Pitstop auto fill fuel next stop flag                           | 0.0                |
+| dcTriggerWindshieldWipers       |                      | In car momentarily turn on wipers                               | false              |
+| dcToggleWindshieldWipers        |                      | In car turn wipers on or off                                    | false              |
+| dcLowFuelAccept                 |                      | In car low fuel accept                                          | false              |
+| dcHeadlightFlash                |                      | In car headlight flash control active                           | false              |
+| dcDashPage                      |                      | In car dash display page adjustment                             | 0.0                |
+| dcBrakeBias                     |                      | In car brake bias adjustment                                    | 42.07857           |
+| WeatherDeclaredWet              |                      | The steward says rain tires can be used                         | false              |
+| TrackWetness                    | irsdk_TrackWetness   | How wet is the average track surface                            | 1                  |
+| SteeringWheelPctIntensity       | %                    | Force feedback % max intensity                                  | 0.0                |
+| Precipitation                   | %                    | Precipitation at start/finish line                              | 0.0                |
+| PlayerCarSLShiftRPM             | revs/min             | Shift light shift rpm                                           | 8500.0             |
+| PlayerCarSLLastRPM              | revs/min             | Shift light last light rpm                                      | 8500.0             |
+| PlayerCarSLFirstRPM             | revs/min             | Shift light first light rpm                                     | 6700.0             |
+| PlayerCarSLBlinkRPM             | revs/min             | Shift light blink rpm                                           | 8700.0             |
+| CarDistBehind                   | m                    | Distance to first car behind player in meters                   | 500000.0           |
+| CarDistAhead                    | m                    | Distance to first car in front of player in meters              | 500000.0           |
 </details>
 
 <details>
