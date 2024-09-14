@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import iracing.telemetry.TelemetryData
+import iracing.IRacingData
 import ui.components.dashboards.ferrari.FerrariDash
 
 enum class Dashboard {
@@ -16,7 +16,7 @@ enum class Dashboard {
 }
 
 @Composable
-fun MainDashboard(telemetry: Map<String, TelemetryData>) {
+fun MainDashboard(telemetry: IRacingData.Telemetry) {
 
     var currentDash by remember { mutableStateOf(Dashboard.Ferrari.ordinal) }
 

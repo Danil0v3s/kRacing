@@ -26,7 +26,7 @@ fun App() = MaterialTheme {
     }
 
     when (val s = state) {
-        is IRacingData.Telemetry -> MainDashboard(s.data)
+        is IRacingData.Telemetry -> MainDashboard(s)
         else -> Box{}
     }
 }
