@@ -56,6 +56,7 @@ import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.send
+import kotlinx.coroutines.flow.catch
 
 data class ServerState(
     val isRunning: Boolean = false,
@@ -298,24 +299,28 @@ private fun Application.extracted(
     routing {
         authenticate("auth-basic") {
             webSocket("/telemetry") {
-                reader.currentData.filterNotNull().collect { data ->
-                    val queryParams = call.request.queryParameters
-                    val filters = queryParams["filter"]?.split(",").orEmpty()
-
-                    val result = when {
-                        filters.isNotEmpty() -> {
-                            val result = data.copy(
-                                telemetry = data.telemetry.filter { telemetryData ->
-                                    filters.contains(telemetryData.key)
-                                }
-                            )
-                            Json.encodeToString(result)
-                        }
-
-                        else -> Json.encodeToString(data)
+                reader.currentData.filterNotNull()
+                    .catch {
+                        println(it)
                     }
-                    send(result)
-                }
+                    .collect { data ->
+                        val queryParams = call.request.queryParameters
+                        val filters = queryParams["filter"]?.split(",").orEmpty()
+
+                        val result = when {
+                            filters.isNotEmpty() -> {
+                                val result = data.copy(
+                                    telemetry = data.telemetry.filter { telemetryData ->
+                                        filters.contains(telemetryData.key)
+                                    }
+                                )
+                                Json.encodeToString(result)
+                            }
+
+                            else -> Json.encodeToString(data)
+                        }
+                        send(result)
+                    }
             }
         }
     }

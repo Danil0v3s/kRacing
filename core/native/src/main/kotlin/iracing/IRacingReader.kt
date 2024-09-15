@@ -44,7 +44,8 @@ class IRacingReader {
     private var pollingJob: Job? = null
 
     private var memoryMapFile: WinNT.HANDLE? = null
-    private var pointer: Pointer? = null
+    private var eventFile: WinNT.HANDLE? = null
+    private var telemetryPointer: Pointer? = null
 
     private var header: IRacingDataHeader? = null
 
@@ -57,17 +58,25 @@ class IRacingReader {
 
     var pollingInterval = 200L
     val currentData = flow<IRacingData?> {
-        tryOpenMemoryFile()
-
-        pointer ?: return@flow
+        while (telemetryPointer == null || eventFile == null) {
+            tryOpenMemoryFile()
+            if (telemetryPointer == null || eventFile == null) {
+                println("Couldn't connect to iRacing. Delaying 1 second")
+                delay(1_000L)
+            } else {
+                println("Connected to iRacing")
+            }
+        }
 
         while (true) {
             try {
-                emit(IRacingData(
-                    telemetry = readTelemetryData(pointer!!),
-                    session = readSessionInfoData()
-                ))
-                delay(pollingInterval)
+                emit(
+                    IRacingData(
+                        telemetry = readTelemetryData(telemetryPointer!!),
+                        session = readSessionInfoData()
+                    )
+                )
+                windowsService.waitForEvent(eventFile!!)
             } catch (e: CancellationException) {
                 break
             }
@@ -77,16 +86,23 @@ class IRacingReader {
     fun stopPolling() {
         pollingJob?.cancel()
         pollingJob = null
-        pointer?.let { windowsService.unmapViewOfFile(it) }
+        telemetryPointer?.let { windowsService.unmapViewOfFile(it) }
         memoryMapFile?.let { windowsService.closeHandle(it) }
     }
 
     fun tryOpenMemoryFile() {
-        if (memoryMapFile != null) return
-        windowsService.openMemoryMapFile(YML_MAP_FILE_NAME)?.let { handle ->
-            memoryMapFile = handle
-            pointer = windowsService.mapViewOfFile(handle) ?: throw Error("Could not create pointer")
-        } ?: throw Error("Could not read MAHMSharedMemory")
+        if (memoryMapFile == null) {
+            windowsService.openMemoryMapFile(YML_MAP_FILE_NAME)?.let { handle ->
+                memoryMapFile = handle
+                telemetryPointer = windowsService.mapViewOfFile(handle)
+            }
+        }
+
+        if (eventFile == null) {
+            windowsService.openEventFile(EVENTS_MAP_FILE_NAME)?.let { handle ->
+                eventFile = handle
+            }
+        }
     }
 
     private fun readHeader(pointer: Pointer): IRacingDataHeader {
@@ -105,11 +121,12 @@ class IRacingReader {
     }
 
     private fun readSessionInfoData(): SessionInfoData {
-        if (header == null || pointer == null) {
+        if (header == null || telemetryPointer == null) {
             tryOpenMemoryFile()
-            this.header = readHeader(pointer!!)
+            this.header = readHeader(telemetryPointer!!)
         }
-        val sessionInfoData = readSessionInfoData(getByteBuffer(pointer!!, header!!.sessionInfoLen, header!!.sessionInfoOffset))
+        val sessionInfoData =
+            readSessionInfoData(getByteBuffer(telemetryPointer!!, header!!.sessionInfoLen, header!!.sessionInfoOffset))
 
         return sessionInfoData
     }

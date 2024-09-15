@@ -2,7 +2,12 @@ package win32
 
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.Kernel32
+import com.sun.jna.platform.win32.WinBase
 import com.sun.jna.platform.win32.WinNT
+import com.sun.jna.platform.win32.WinNT.HANDLE
+import com.sun.jna.platform.win32.WinNT.INFINITE
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class WindowsService {
 
@@ -20,6 +25,11 @@ class WindowsService {
         val memMapFile = Kernel32Impl.KERNEL_32.OpenEvent(WinNT.SYNCHRONIZE, false, filename)
         lastError = Kernel32Impl.KERNEL_32.GetLastError()
         return memMapFile
+    }
+
+    suspend fun waitForEvent(handle: HANDLE) = suspendCancellableCoroutine {
+        val result = Kernel32Impl.KERNEL_32.WaitForSingleObject(handle, INFINITE)
+        it.resume(result != WinBase.WAIT_OBJECT_0)
     }
 
     fun closeHandle(handle: WinNT.HANDLE) {
