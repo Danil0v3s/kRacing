@@ -76,7 +76,8 @@ class IRacingReader {
                         session = readSessionInfoData()
                     )
                 )
-                windowsService.waitForEvent(eventFile!!)
+//                windowsService.waitForEvent(eventFile!!)
+                delay(pollingInterval)
             } catch (e: CancellationException) {
                 break
             }
