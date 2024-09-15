@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import iracing.IRacingData
 import iracing.telemetry.TelemetryData
 import iracing.yaml.SessionInfoData
 import led.LedsController
@@ -18,16 +17,14 @@ fun App() = MaterialTheme {
     val state by GameDataRepository.iRacingData.collectAsState(null)
 
     LaunchedEffect(state) {
-        when (val s = state) {
-            is IRacingData.Session -> updateSession(s.data)
-            is IRacingData.Telemetry -> updateRPM(s.data)
-            null -> Unit
+        state?.let {
+            updateSession(it.session)
+            updateRPM(it.telemetry)
         }
     }
 
-    when (val s = state) {
-        is IRacingData.Telemetry -> MainDashboard(s)
-        else -> Box{}
+    state?.let {
+        MainDashboard(it)
     }
 }
 

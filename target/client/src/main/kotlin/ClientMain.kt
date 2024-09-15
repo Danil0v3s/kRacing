@@ -11,7 +11,7 @@ fun main() = application {
     val icon = painterResource("imgs/logo.svg")
     val state = rememberWindowState().apply {
         size = DpSize(800.dp, 480.dp)
-        placement = WindowPlacement.Fullscreen
+        placement = WindowPlacement.Floating
     }
 
     Window(

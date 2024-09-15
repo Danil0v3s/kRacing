@@ -303,9 +303,9 @@ private fun Application.extracted(
                     val filters = queryParams["filter"]?.split(",").orEmpty()
 
                     val result = when {
-                        filters.isNotEmpty() && data is IRacingData.Telemetry -> {
+                        filters.isNotEmpty() -> {
                             val result = data.copy(
-                                data = data.data.filter { telemetryData ->
+                                telemetry = data.telemetry.filter { telemetryData ->
                                     filters.contains(telemetryData.key)
                                 }
                             )

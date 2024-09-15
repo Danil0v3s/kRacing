@@ -5,29 +5,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
+import iracing.FuelLevel
+import iracing.Gear
 import iracing.IRacingData
-import iracing.telemetry.FuelLevel
-import iracing.telemetry.Gear
-import iracing.telemetry.LFtempCL
-import iracing.telemetry.LFtempCM
-import iracing.telemetry.LFtempCR
-import iracing.telemetry.LRtempCL
-import iracing.telemetry.LRtempCM
-import iracing.telemetry.LRtempCR
-import iracing.telemetry.LapDeltaToOptimalLap
-import iracing.telemetry.LapLastLapTime
-import iracing.telemetry.RFtempCL
-import iracing.telemetry.RFtempCM
-import iracing.telemetry.RFtempCR
-import iracing.telemetry.RRtempCL
-import iracing.telemetry.RRtempCM
-import iracing.telemetry.RRtempCR
-import iracing.telemetry.Speed
-import iracing.telemetry.dcBrakeBias
-import iracing.telemetry.dpLFTireColdPress
-import iracing.telemetry.dpLRTireColdPress
-import iracing.telemetry.dpRFTireColdPress
-import iracing.telemetry.dpRRTireColdPress
+import iracing.LFtempCL
+import iracing.LFtempCM
+import iracing.LFtempCR
+import iracing.LRtempCL
+import iracing.LRtempCM
+import iracing.LRtempCR
+import iracing.LapDeltaToOptimalLap
+import iracing.LapLastLapTime
+import iracing.RFtempCL
+import iracing.RFtempCM
+import iracing.RFtempCR
+import iracing.RRtempCL
+import iracing.RRtempCM
+import iracing.RRtempCR
+import iracing.Speed
+import iracing.dcBrakeBias
+import iracing.dpLFTireColdPress
+import iracing.dpLRTireColdPress
+import iracing.dpRFTireColdPress
+import iracing.dpRRTireColdPress
 import ui.components.Cell
 import ui.components.grid.GridPad
 import ui.components.grid.GridPadCells
@@ -36,7 +36,7 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 @Composable
-fun FerrariDash(telemetry: IRacingData.Telemetry) {
+fun FerrariDash(telemetry: IRacingData) {
     GridPad(
         cells = GridPadCells(rowCount = 5, columnCount = 6),
         modifier = Modifier.background(Color.Black)
@@ -49,7 +49,7 @@ fun FerrariDash(telemetry: IRacingData.Telemetry) {
     }
 }
 
-private fun GridPadScope.FirstRow(telemetry: IRacingData.Telemetry) {
+private fun GridPadScope.FirstRow(telemetry: IRacingData) {
     item(row = 0, column = 0) {
         Cell(content = "R")
     }
@@ -77,7 +77,7 @@ private fun GridPadScope.FirstRow(telemetry: IRacingData.Telemetry) {
     }
 }
 
-private fun GridPadScope.SecondRow(telemetry: IRacingData.Telemetry) {
+private fun GridPadScope.SecondRow(telemetry: IRacingData) {
     item(row = 1, column = 0) {
         val pressure = telemetry.dpLFTireColdPress.div(100f)
         Cell(title = "P FL", content = pressure?.toString())
@@ -111,7 +111,7 @@ private fun GridPadScope.SecondRow(telemetry: IRacingData.Telemetry) {
     }
 }
 
-private fun GridPadScope.ThirdRow(telemetry: IRacingData.Telemetry) {
+private fun GridPadScope.ThirdRow(telemetry: IRacingData) {
     item(row = 2, column = 0) {
         val pressure = telemetry.dpLRTireColdPress.div(100f)
         Cell(title = "P RL", content = pressure?.toString())
@@ -136,7 +136,7 @@ private fun GridPadScope.ThirdRow(telemetry: IRacingData.Telemetry) {
     }
 }
 
-private fun GridPadScope.FourthRow(telemetry: IRacingData.Telemetry) {
+private fun GridPadScope.FourthRow(telemetry: IRacingData) {
     item(row = 3, column = 0, columnSpan = 2) {
         val seconds = telemetry.LapLastLapTime
 
@@ -177,7 +177,7 @@ private fun GridPadScope.FourthRow(telemetry: IRacingData.Telemetry) {
     }
 }
 
-private fun GridPadScope.FifthRow(telemetry: IRacingData.Telemetry) {
+private fun GridPadScope.FifthRow(telemetry: IRacingData) {
     item(row = 4, column = 0) {
         Cell(title = "MIX", content = "1")
     }
@@ -185,15 +185,15 @@ private fun GridPadScope.FifthRow(telemetry: IRacingData.Telemetry) {
         Cell(title = "PED", content = "1")
     }
     item(row = 4, column = 2) {
-        val tc = telemetry.data["dcTractionControl"]?.value?.toFloat()?.roundToInt()
+        val tc = telemetry.telemetry["dcTractionControl"]?.value?.toFloat()?.roundToInt()
         Cell(title = "TC 1", content = tc.toString())
     }
     item(row = 4, column = 3) {
-        val tc = telemetry.data["dcTractionControl"]?.value?.toFloat()?.roundToInt()
+        val tc = telemetry.telemetry["dcTractionControl"]?.value?.toFloat()?.roundToInt()
         Cell(title = "TC 2", content = tc.toString())
     }
     item(row = 4, column = 4) {
-        val abs = telemetry.data["dcABS"]?.value?.toFloat()?.roundToInt()
+        val abs = telemetry.telemetry["dcABS"]?.value?.toFloat()?.roundToInt()
         Cell(title = "ABS", content = abs.toString())
     }
     item(row = 4, column = 5) {

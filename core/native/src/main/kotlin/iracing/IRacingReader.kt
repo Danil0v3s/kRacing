@@ -37,7 +37,6 @@ object MAHMSizes {
 
 private const val YML_MAP_FILE_NAME = "Local\\IRSDKMemMapFileName"
 private const val EVENTS_MAP_FILE_NAME = "Local\\IRSDKDataValidEvent"
-private const val SESSION_EMIT_DELAY = 30_000L
 
 class IRacingReader {
 
@@ -57,7 +56,6 @@ class IRacingReader {
     }
 
     var pollingInterval = 200L
-    private var accumulator = 0L
     val currentData = flow<IRacingData?> {
         tryOpenMemoryFile()
 
@@ -65,14 +63,11 @@ class IRacingReader {
 
         while (true) {
             try {
-                if (accumulator <= 0) {
-                    emit(readSessionInfoData())
-                    accumulator = SESSION_EMIT_DELAY
-                }
-
-                emit(readTelemetryData(pointer!!))
+                emit(IRacingData(
+                    telemetry = readTelemetryData(pointer!!),
+                    session = readSessionInfoData()
+                ))
                 delay(pollingInterval)
-                accumulator -= pollingInterval
             } catch (e: CancellationException) {
                 break
             }
@@ -100,27 +95,23 @@ class IRacingReader {
         return readHeader(buffer)
     }
 
-    private fun readTelemetryData(pointer: Pointer): IRacingData.Telemetry {
+    private fun readTelemetryData(pointer: Pointer): Map<String, TelemetryData> {
         val header = readHeader(pointer)
         this.header = header
         val latestPointerBuffer = header.getLatestVarByteBuffer(pointer)
         val telemetryData = readTelemetryData(header, pointer, latestPointerBuffer)
 
-        return IRacingData.Telemetry(
-            data = telemetryData
-        )
+        return telemetryData
     }
 
-    private fun readSessionInfoData(): IRacingData.Session {
+    private fun readSessionInfoData(): SessionInfoData {
         if (header == null || pointer == null) {
             tryOpenMemoryFile()
             this.header = readHeader(pointer!!)
         }
         val sessionInfoData = readSessionInfoData(getByteBuffer(pointer!!, header!!.sessionInfoLen, header!!.sessionInfoOffset))
 
-        return IRacingData.Session(
-            data = sessionInfoData
-        )
+        return sessionInfoData
     }
 
     private fun readTelemetryData(
