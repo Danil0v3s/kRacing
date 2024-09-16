@@ -1640,8 +1640,8 @@ val IRacingData.CarIdxLastLapTime: Float
 /**
  * Percentage distance around lap by car index
  */
-val IRacingData.CarIdxLapDistPct: Float
-    get() = this.telemetry["CarIdxLapDistPct"]?.value?.toFloatOrNull() ?: 0f
+val IRacingData.CarIdxLapDistPct: String
+    get() = this.telemetry["CarIdxLapDistPct"]?.value.orEmpty()
 
 /**
  * Laps completed by car index

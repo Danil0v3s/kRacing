@@ -2,14 +2,11 @@ package ui.components.dashboards.map
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -19,35 +16,35 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
-import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.PathMeasure
-import androidx.compose.ui.graphics.addOutline
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asSkiaPath
+import androidx.compose.ui.graphics.drawscope.DrawStyle
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.PathParser
-import androidx.compose.ui.graphics.vector.toPath
 import androidx.compose.ui.res.useResource
-import androidx.compose.ui.text.TextLayoutInput
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import iracing.CarIdxLapDistPct
 import iracing.IRacingData
-import iracing.LapDistPct
 import kotlin.math.floor
 
 @Composable
 fun MapDash(data: IRacingData) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        MapCanvas(data.session.WeekendInfo?.TrackID ?: "", data.LapDistPct, Modifier.size(400.dp))
+        MapCanvas(data.session.WeekendInfo?.TrackID ?: "", data.CarIdxLapDistPct, Modifier.size(400.dp))
     }
 }
 
 @Composable
-private fun MapCanvas(trackId: String, lapPercentage: Float, modifier: Modifier = Modifier) {
+private fun MapCanvas(
+    trackId: String,
+    carIdxLapDistPct: String,
+    modifier: Modifier = Modifier
+) {
     val animateSize = remember { Animatable(0f) }
-    val rememberTextMeasurer = rememberTextMeasurer()
 
     LaunchedEffect(Unit) {
         animateSize.animateTo(
@@ -99,20 +96,31 @@ private fun MapCanvas(trackId: String, lapPercentage: Float, modifier: Modifier 
         for (i in 0..1000) {
             points.add(measurer.getPosition(measurer.length * (i / 1000f)))
         }
-        val pathStartFinishLinePoint =
-            points.indexOfFirst { ((it.y - startPos.y) - (it.x - startPos.x)).let { it > 0f && it < 0.1f } }
+        val pathStartFinishLinePoint = points.indexOfFirst {
+            ((it.y - startPos.y) - (it.x - startPos.x)).let { it > 0f && it < 0.1f }
+        }
         val newPoints = points.subList(pathStartFinishLinePoint, points.size)
         newPoints.addAll(points.subList(0, pathStartFinishLinePoint - 1))
 
-        val percentage = lapPercentage
-        val progress = floor(newPoints.size * percentage).toInt()
-        path.addOval(Rect(newPoints[progress], 5f))
+        carIdxLapDistPct.split(",").forEach { lapDistPctString ->
+            val lapPercentage = (lapDistPctString.toFloatOrNull() ?: 0f).coerceAtLeast(0f)
+            val progress = floor(newPoints.size * lapPercentage).toInt()
 
-        drawText(rememberTextMeasurer, "$trackId -> $percentage% - $progress")
+            drawCircle(
+                color = Color.Blue,
+                center = newPoints[progress],
+                radius = 5f
+            )
+        }
 
         drawPath(
             path = path,
             color = Color.Black,
+            style = Stroke(
+                width = 1f,
+                join = StrokeJoin.Round,
+                cap = StrokeCap.Round
+            )
         )
 
         drawPath(
@@ -137,4 +145,14 @@ private fun getSvgPath(resourcePath: String): String = useResource(resourcePath)
     val first = svg.substring(svg.indexOf(" d=") + 4)
     val path = first.split("\"")
     path[0]
+}
+
+private fun getSvgPaths(resourcePath: String): List<String> = useResource(resourcePath) { stream ->
+    val svg = stream.bufferedReader().use { it.readText() }
+
+    val first = svg.substring(svg.indexOf(" d=") + 4)
+    val path = first.split("\"")
+
+
+    path
 }
