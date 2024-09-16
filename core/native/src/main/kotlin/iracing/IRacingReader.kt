@@ -12,15 +12,11 @@ import com.sun.jna.platform.win32.WinNT
 import iracing.MAHMSizes.IRSDK_MAX_DESC
 import iracing.MAHMSizes.IRSDK_MAX_STRING
 import iracing.telemetry.TelemetryData
+import iracing.telemetry.TelemetryVarHeader
 import iracing.yaml.SessionInfoData
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import win32.WindowsService
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -61,6 +57,8 @@ class IRacingReader {
         }
     }
 
+    private var telemetryVarLookup = mutableMapOf<String, TelemetryVarHeader>()
+
     var pollingInterval = 200L
 
     val sessionFlow = flow {
@@ -77,10 +75,14 @@ class IRacingReader {
         }
     }
 
+    var telemetryFilter = mutableListOf<String>()
     val telemetryFlow = flow {
         initialize()
+        // emit first time from build
+        emit(buildTelemetryDataLookup())
+
         while (true) {
-            emit(readTelemetryData(telemetryPointer!!))
+            emit(readTelemetryData())
             delay(pollingInterval)
         }
     }
@@ -102,6 +104,7 @@ class IRacingReader {
         pollingJob = null
         telemetryPointer?.let { windowsService.unmapViewOfFile(it) }
         memoryMapFile?.let { windowsService.closeHandle(it) }
+        eventFile?.let { windowsService.closeHandle(it) }
     }
 
     fun tryOpenMemoryFile() {
@@ -125,11 +128,12 @@ class IRacingReader {
         return readHeader(buffer)
     }
 
-    private fun readTelemetryData(pointer: Pointer): Map<String, TelemetryData> {
+    private fun buildTelemetryDataLookup(): Map<String, TelemetryData> {
+        val pointer = telemetryPointer ?: return emptyMap()
         val header = readHeader(pointer)
         this.header = header
         val latestPointerBuffer = header.getLatestVarByteBuffer(pointer)
-        val telemetryData = readTelemetryData(header, pointer, latestPointerBuffer)
+        val telemetryData = buildTelemetryDataLookup(header, pointer, latestPointerBuffer)
 
         return telemetryData
     }
@@ -145,7 +149,26 @@ class IRacingReader {
         return sessionInfoData
     }
 
-    private fun readTelemetryData(
+    private fun readTelemetryData(): Map<String, TelemetryData> {
+        val latestPointerBuffer = header?.getLatestVarByteBuffer(telemetryPointer!!) ?: return emptyMap()
+
+        return telemetryVarLookup
+            .filter { if (telemetryFilter.size > 0) telemetryFilter.contains(it.key) else true }
+            .mapValues { varHeader ->
+                val value = readVariable(
+                    varHeader.value.type,
+                    varHeader.value.count,
+                    latestPointerBuffer,
+                    varHeader.value.offset
+                )
+
+                TelemetryData(
+                    value = value,
+                )
+            }
+    }
+
+    private fun buildTelemetryDataLookup(
         header: IRacingDataHeader,
         pointer: Pointer,
         latestPointerBuffer: ByteBuffer
@@ -177,54 +200,66 @@ class IRacingReader {
             buffer[localBuffer, 0, localBuffer.size]
             val desc = String(localBuffer).replace("[\u0000]".toRegex(), "")
 
-            val value = when (type) {
-                // char, bool
-                0, 1 -> if (count == 1) {
-                    latestPointerBuffer.getChar(offset).toString().toBoolean().toString()
-                } else {
-                    // Read multiple boolean values
-                    List(count) { i ->
-                        latestPointerBuffer.getChar(offset + i * 2).toString().toBoolean() // Each char is 2 bytes
-                    }.joinToString(",")
-                }
-
-                2, 3 -> if (count == 1) {
-                    latestPointerBuffer.getInt(offset).toString()
-                } else {
-                    // Read multiple int values
-                    IntArray(count) { i ->
-                        latestPointerBuffer.getInt(offset + i * 4) // Each int is 4 bytes
-                    }.joinToString(",")
-                }
-
-                4 -> if (count == 1) {
-                    latestPointerBuffer.getFloat(offset).toString()
-                } else {
-                    // Read multiple float values
-                    FloatArray(count) { i ->
-                        latestPointerBuffer.getFloat(offset + i * 4) // Each float is 4 bytes
-                    }.joinToString(",")
-                }
-
-                5 -> if (count == 1) {
-                    latestPointerBuffer.getDouble(offset).toString()
-                } else {
-                    // Read multiple double values
-                    DoubleArray(count) { i ->
-                        latestPointerBuffer.getDouble(offset + i * 8) // Each double is 8 bytes
-                    }.joinToString(",")
-                }
-
-                else -> "-1"
-            }
+            val value = readVariable(type, count, latestPointerBuffer, offset)
 
             telemetryData[name] = TelemetryData(
-                description = desc,
                 value = value,
-                unit = unit
+            )
+
+            telemetryVarLookup[name] = TelemetryVarHeader(
+                name, unit, desc, type, count, offset
             )
         }
         return telemetryData
+    }
+
+    private fun readVariable(
+        type: Int,
+        count: Int,
+        latestPointerBuffer: ByteBuffer,
+        offset: Int
+    ): String {
+        val value = when (type) {
+            // char, bool
+            0, 1 -> if (count == 1) {
+                latestPointerBuffer.getChar(offset).toString().toBoolean().toString()
+            } else {
+                // Read multiple boolean values
+                List(count) { i ->
+                    latestPointerBuffer.getChar(offset + i * 2).toString().toBoolean() // Each char is 2 bytes
+                }.joinToString(",")
+            }
+
+            2, 3 -> if (count == 1) {
+                latestPointerBuffer.getInt(offset).toString()
+            } else {
+                // Read multiple int values
+                IntArray(count) { i ->
+                    latestPointerBuffer.getInt(offset + i * 4) // Each int is 4 bytes
+                }.joinToString(",")
+            }
+
+            4 -> if (count == 1) {
+                latestPointerBuffer.getFloat(offset).toString()
+            } else {
+                // Read multiple float values
+                FloatArray(count) { i ->
+                    latestPointerBuffer.getFloat(offset + i * 4) // Each float is 4 bytes
+                }.joinToString(",")
+            }
+
+            5 -> if (count == 1) {
+                latestPointerBuffer.getDouble(offset).toString()
+            } else {
+                // Read multiple double values
+                DoubleArray(count) { i ->
+                    latestPointerBuffer.getDouble(offset + i * 8) // Each double is 8 bytes
+                }.joinToString(",")
+            }
+
+            else -> "-1"
+        }
+        return value
     }
 
     private fun readSessionInfoData(buffer: ByteBuffer): SessionInfoData {

@@ -299,34 +299,23 @@ private fun Application.extracted(
 
     routing {
         authenticate("auth-basic") {
+            webSocket("/session") {
+                reader
+                    .sessionFlow
+                    .collect { data ->
+                        send(Json.encodeToString(data))
+                    }
+            }
             webSocket("/telemetry") {
-                combine(reader.sessionFlow, reader.telemetryFlow) { session, telemetry ->
-                    IRacingData(
-                        telemetry = telemetry,
-                        session = session,
-                        isConnected = session.IsConnected
-                    )
-                }
+                val queryParams = call.request.queryParameters
+                reader.telemetryFilter.addAll(queryParams["filter"]?.split(",").orEmpty())
+                reader
+                    .telemetryFlow
                     .catch {
                         println(it)
                     }
                     .collect { data ->
-                        val queryParams = call.request.queryParameters
-                        val filters = queryParams["filter"]?.split(",").orEmpty()
-
-                        val result = when {
-                            filters.isNotEmpty() -> {
-                                val result = data.copy(
-                                    telemetry = data.telemetry.filter { telemetryData ->
-                                        filters.contains(telemetryData.key)
-                                    }
-                                )
-                                Json.encodeToString(result)
-                            }
-
-                            else -> Json.encodeToString(data)
-                        }
-                        send(result)
+                        send(Json.encodeToString(data))
                     }
             }
         }
