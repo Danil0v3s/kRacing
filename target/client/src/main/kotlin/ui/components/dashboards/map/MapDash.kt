@@ -1,9 +1,13 @@
 package ui.components.dashboards.map
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import iracing.CarIdxLapDistPct
+import iracing.CarIdxPosition
 import iracing.IRacingData
 import iracing.PlayerCarIdx
 import iracing.yaml.SessionInfoData
@@ -35,7 +40,7 @@ import kotlin.math.floor
 
 class DashViewModel : ViewModel() {
 
-    private val filters = listOf("CarIdxLapDistPct", "PlayerCarIdx")
+    private val filters = listOf("CarIdxLapDistPct", "PlayerCarIdx", "CarIdxPosition")
     val telemetry = GameDataRepository.telemetry(filters)
     val sessionData = GameDataRepository.session()
 
@@ -58,6 +63,11 @@ fun MapDash(viewModel: DashViewModel = viewModel()) {
                 (pctString.toFloatOrNull() ?: 0f).coerceAtLeast(0f)
             }
         },
+        carStandings = {
+            telemetry.CarIdxPosition.split(",").map { pctString ->
+                (pctString.toIntOrNull() ?: 0).coerceAtLeast(0)
+            }
+        },
         playerIdx = { telemetry.PlayerCarIdx },
         modifier = Modifier.fillMaxSize()
     )
@@ -69,16 +79,25 @@ private fun Content(
     trackId: () -> String,
     carPositions: () -> List<Float>,
     playerIdx: () -> Int,
-    modifier: Modifier = Modifier
+    carStandings: () -> List<Int>,
+    modifier: Modifier = Modifier,
 ) {
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    Row (
+        modifier = modifier.background(Color.Black),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         MapCanvas(
             trackId = trackId,
             carPositions = carPositions,
             playerIdx = playerIdx,
-            modifier = Modifier.size(400.dp)
+            carStandings = carStandings,
+            modifier = Modifier.width(400.dp).aspectRatio(1/1f)
         )
+        Column (modifier = Modifier.fillMaxSize().background(Color.Black)) {
+
+        }
     }
 }
 
@@ -87,10 +106,13 @@ private fun MapCanvas(
     trackId: () -> String,
     carPositions: () -> List<Float>,
     playerIdx: () -> Int,
+    carStandings: () -> List<Int>,
     modifier: Modifier = Modifier
 ) {
-    val playerPainter = remember { Paint().asFrameworkPaint().apply { color = Color.Blue.toArgb() } }
-    val otherPainter = remember { Paint().asFrameworkPaint().apply { color = Color.Red.toArgb() } }
+    val playerPainter = remember { Paint().asFrameworkPaint().apply { color = Color.Green.toArgb() } }
+    val otherPainter = remember { Paint().asFrameworkPaint().apply { color = Color.Blue.toArgb() } }
+    val aheadPainter = remember { Paint().asFrameworkPaint().apply { color = Color.Red.toArgb() } }
+    val behindPainter = remember { Paint().asFrameworkPaint().apply { color = Color.White.toArgb() } }
 
     val trackPath = remember(trackId()) { getSvgPath("/track_images/${trackId()}.svg") }
     val startLinePath = remember(trackId()) { getSvgPath("/start_finish/${trackId()}.svg") }
@@ -143,7 +165,7 @@ private fun MapCanvas(
 
         drawPath(
             path = path,
-            color = Color.Black,
+            color = Color.White,
             style = Stroke(
                 width = 1f,
                 join = StrokeJoin.Round,
@@ -153,12 +175,12 @@ private fun MapCanvas(
 
         drawPath(
             path = start,
-            color = Color.Red,
+            color = Color.Cyan,
         )
 
         drawPath(
             path = pitroad,
-            color = Color.Blue,
+            color = Color.Cyan,
         )
 
         this.drawContext.canvas.nativeCanvas.apply {
@@ -166,12 +188,23 @@ private fun MapCanvas(
                 val rawPosition = if (isTrackClockwise) (1f - position).mod(1f) else position
                 val progress = floor(newPoints.size * rawPosition).toInt()
                 val offset = newPoints[progress]
+                val playerStanding = carStandings()[playerIdx()]
 
                 this.drawCircle(
                     x = offset.x,
                     y = offset.y,
                     radius = 5f,
-                    paint = if (index == playerIdx()) playerPainter else otherPainter
+                    paint = when {
+                        index == playerIdx() -> playerPainter
+                        index != playerIdx() -> {
+                            if (carStandings()[index] > playerStanding) {
+                                aheadPainter
+                            } else {
+                                behindPainter
+                            }
+                        }
+                        else -> otherPainter
+                    }
                 )
             }
         }
