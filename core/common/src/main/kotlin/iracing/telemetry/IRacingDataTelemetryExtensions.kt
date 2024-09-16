@@ -818,8 +818,8 @@ val IRacingData.Telemetry.PlayerCarInPitStall: Boolean
 /**
  * Players carIdx
  */
-val IRacingData.Telemetry.PlayerCarIdx: Float
-    get() = this.telemetry["PlayerCarIdx"]?.value?.toFloatOrNull() ?: 0f
+val IRacingData.Telemetry.PlayerCarIdx: Int
+    get() = this.telemetry["PlayerCarIdx"]?.value?.toIntOrNull() ?: 0
 
 /**
  * Players dry tire set limit

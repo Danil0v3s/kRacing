@@ -1,11 +1,12 @@
 package ui.app
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import iracing.IRacingData
 import iracing.telemetry.TelemetryData
 import iracing.yaml.SessionInfoData
 import led.LedsController
@@ -14,18 +15,11 @@ import ui.components.dashboards.MainDashboard
 
 @Composable
 fun App() = MaterialTheme {
-    val state by GameDataRepository.iRacingData.collectAsState(null)
+//    val filters = remember { listOf("RPM") }
+//    val telemetryData by GameDataRepository.telemetry(filters).collectAsState(IRacingData.Telemetry(telemetry = emptyMap()))
+//    val sessionData by GameDataRepository.session().collectAsState(null)
 
-    LaunchedEffect(state) {
-        state?.let {
-            updateSession(it.session)
-            updateRPM(it.telemetry)
-        }
-    }
-
-    state?.let {
-        MainDashboard(it)
-    }
+    MainDashboard()
 }
 
 private fun updateSession(session: SessionInfoData) {

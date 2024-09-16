@@ -18,7 +18,7 @@ enum class Dashboard {
 }
 
 @Composable
-fun MainDashboard(data: IRacingData) {
+fun MainDashboard() {
 
     var currentDash by remember { mutableStateOf(Dashboard.Map.ordinal) }
 
@@ -27,8 +27,8 @@ fun MainDashboard(data: IRacingData) {
             currentDash += 1
         }) {
         when (currentDash % Dashboard.entries.size) {
-            0 -> FerrariDash(data)
-            1 -> MapDash(data)
+            0 -> FerrariDash()
+            1 -> MapDash()
         }
     }
 }

@@ -2,6 +2,9 @@ package ui.components.dashboards.ferrari
 
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
@@ -30,6 +33,7 @@ import iracing.dpLFTireColdPress
 import iracing.dpLRTireColdPress
 import iracing.dpRFTireColdPress
 import iracing.dpRRTireColdPress
+import repository.GameDataRepository
 import ui.components.Cell
 import ui.components.grid.GridPad
 import ui.components.grid.GridPadCells
@@ -38,7 +42,37 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 @Composable
-fun FerrariDash(telemetry: IRacingData) {
+fun FerrariDash() {
+    val filters = remember {
+        listOf(
+            "FuelLevel",
+            "Speed",
+            "dpLFTireColdPress",
+            "dpRFTireColdPress",
+            "Gear",
+            "LFtempCL",
+            "LFtempCM",
+            "LFtempCR",
+            "RFtempCL",
+            "RFtempCM",
+            "RFtempCR",
+            "dpLRTireColdPress",
+            "dpRRTireColdPress",
+            "LRtempCL",
+            "LRtempCM",
+            "LRtempCR",
+            "RRtempCL",
+            "RRtempCM",
+            "RRtempCR",
+            "LapLastLapTime",
+            "LapDeltaToOptimalLap",
+            "dcTractionControl",
+            "dcABS",
+            "dcBrakeBias",
+        )
+    }
+    val telemetry by GameDataRepository.telemetry(filters).collectAsState(IRacingData.Telemetry(telemetry = emptyMap()))
+
     GridPad(
         cells = GridPadCells(rowCount = 5, columnCount = 6),
         modifier = Modifier.background(Color.Black)
@@ -51,7 +85,7 @@ fun FerrariDash(telemetry: IRacingData) {
     }
 }
 
-private fun GridPadScope.FirstRow(telemetry: IRacingData) {
+private fun GridPadScope.FirstRow(telemetry: IRacingData.Telemetry) {
     item(row = 0, column = 0) {
         Cell(content = "R")
     }
@@ -79,7 +113,7 @@ private fun GridPadScope.FirstRow(telemetry: IRacingData) {
     }
 }
 
-private fun GridPadScope.SecondRow(telemetry: IRacingData) {
+private fun GridPadScope.SecondRow(telemetry: IRacingData.Telemetry) {
     item(row = 1, column = 0) {
         val pressure = telemetry.dpLFTireColdPress.div(100f)
         Cell(title = "P FL", content = pressure?.toString())
@@ -113,7 +147,7 @@ private fun GridPadScope.SecondRow(telemetry: IRacingData) {
     }
 }
 
-private fun GridPadScope.ThirdRow(telemetry: IRacingData) {
+private fun GridPadScope.ThirdRow(telemetry: IRacingData.Telemetry) {
     item(row = 2, column = 0) {
         val pressure = telemetry.dpLRTireColdPress.div(100f)
         Cell(title = "P RL", content = pressure?.toString())
@@ -138,7 +172,7 @@ private fun GridPadScope.ThirdRow(telemetry: IRacingData) {
     }
 }
 
-private fun GridPadScope.FourthRow(telemetry: IRacingData) {
+private fun GridPadScope.FourthRow(telemetry: IRacingData.Telemetry) {
     item(row = 3, column = 0, columnSpan = 2) {
         val seconds = telemetry.LapLastLapTime
 
@@ -179,7 +213,7 @@ private fun GridPadScope.FourthRow(telemetry: IRacingData) {
     }
 }
 
-private fun GridPadScope.FifthRow(telemetry: IRacingData) {
+private fun GridPadScope.FifthRow(telemetry: IRacingData.Telemetry) {
     item(row = 4, column = 0) {
         Cell(title = "MIX", content = "1")
     }

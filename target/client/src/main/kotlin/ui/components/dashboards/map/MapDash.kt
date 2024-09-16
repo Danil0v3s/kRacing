@@ -1,69 +1,110 @@
 package ui.components.dashboards.map
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asSkiaPath
-import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.res.useResource
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import iracing.CarIdxLapDistPct
 import iracing.IRacingData
+import iracing.PlayerCarIdx
+import iracing.yaml.SessionInfoData
+import repository.GameDataRepository
 import kotlin.math.floor
 
+class DashViewModel : ViewModel() {
+
+    private val filters = listOf("CarIdxLapDistPct", "PlayerCarIdx")
+    val telemetry = GameDataRepository.telemetry(filters)
+    val sessionData = GameDataRepository.session()
+
+}
+
 @Composable
-fun MapDash(data: IRacingData) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        MapCanvas(data.session.WeekendInfo?.TrackID ?: "", data.CarIdxLapDistPct, Modifier.size(400.dp))
+fun MapDash(viewModel: DashViewModel = viewModel()) {
+
+    val telemetry by viewModel.telemetry.collectAsState(IRacingData.Telemetry(telemetry = emptyMap()))
+    val sessionData by viewModel.sessionData.collectAsState(SessionInfoData())
+
+    if (sessionData.WeekendInfo?.TrackID == null) {
+        return
+    }
+
+    Content(
+        trackId = { sessionData.WeekendInfo?.TrackID ?: "" },
+        carPositions = {
+            telemetry.CarIdxLapDistPct.split(",").map { pctString ->
+                (pctString.toFloatOrNull() ?: 0f).coerceAtLeast(0f)
+            }
+        },
+        playerIdx = { telemetry.PlayerCarIdx },
+        modifier = Modifier.fillMaxSize()
+    )
+
+}
+
+@Composable
+private fun Content(
+    trackId: () -> String,
+    carPositions: () -> List<Float>,
+    playerIdx: () -> Int,
+    modifier: Modifier = Modifier
+) {
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        MapCanvas(
+            trackId = trackId,
+            carPositions = carPositions,
+            playerIdx = playerIdx,
+            modifier = Modifier.size(400.dp)
+        )
     }
 }
 
 @Composable
 private fun MapCanvas(
-    trackId: String,
-    carIdxLapDistPct: String,
+    trackId: () -> String,
+    carPositions: () -> List<Float>,
+    playerIdx: () -> Int,
     modifier: Modifier = Modifier
 ) {
-    val animateSize = remember { Animatable(0f) }
+    val playerPainter = remember { Paint().asFrameworkPaint().apply { color = Color.Blue.toArgb() } }
+    val otherPainter = remember { Paint().asFrameworkPaint().apply { color = Color.Red.toArgb() } }
 
-    LaunchedEffect(Unit) {
-        animateSize.animateTo(
-            1f,
-            tween(5000, easing = LinearEasing)
-        )
-    }
+    val trackPath = remember(trackId()) { getSvgPath("/track_images/${trackId()}.svg") }
+    val startLinePath = remember(trackId()) { getSvgPath("/start_finish/${trackId()}.svg") }
+    val pitroadPath = remember(trackId()) { getSvgPath("/pitroad/${trackId()}.svg") }
+
+    val path = remember(trackId()) { PathParser().parsePathString(trackPath).toPath() }
+    val start = remember(trackId()) { PathParser().parsePathString(startLinePath).toPath() }
+    val pitroad = remember(trackId()) { PathParser().parsePathString(pitroadPath).toPath() }
+
+    val measurer = remember(trackId()) { PathMeasure().apply { setPath(path, false) } }
+    val startMeasurer = remember(trackId()) { PathMeasure().apply { setPath(start, false) } }
 
     Canvas(modifier = modifier) {
-        val trackPath = getSvgPath("/track_images/$trackId.svg")
-        val startLinePath = getSvgPath("/start_finish/$trackId.svg")
-//        val turnsPath = getSvgPath("/turns/$trackId.svg")
-        val pitroadPath = getSvgPath("/pitroad/$trackId.svg")
-
-        val path = PathParser().parsePathString(trackPath).toPath()
-        val start = PathParser().parsePathString(startLinePath).toPath()
-//        val turns = PathParser().parsePathString(turnsPath).toPath()
-        val pitroad = PathParser().parsePathString(pitroadPath).toPath()
-
         val bounds = path.asSkiaPath().bounds
         val matrix = Matrix()
         val scaleFactor = size.width / bounds.width
@@ -71,25 +112,21 @@ private fun MapCanvas(
         val translateOffset = Offset(-bounds.left, -bounds.top)
         val secondTranslateOffset = Offset(0f, (size.height - (scaleFactor * bounds.height)) / 2f)
 
-        path.translate(translateOffset)
-        start.translate(translateOffset)
-//        turns.translate(translateOffset)
-        pitroad.translate(translateOffset)
-
         matrix.scale(scaleFactor, scaleFactor)
 
+        path.translate(translateOffset)
+        start.translate(translateOffset)
+        pitroad.translate(translateOffset)
         path.transform(matrix)
         start.transform(matrix)
-//        turns.transform(matrix)
         pitroad.transform(matrix)
 
         path.translate(secondTranslateOffset)
         start.translate(secondTranslateOffset)
-//        turns.translate(secondTranslateOffset)
         pitroad.translate(secondTranslateOffset)
 
-        val measurer = PathMeasure().apply { setPath(path, false) }
-        val startMeasurer = PathMeasure().apply { setPath(start, false) }
+        measurer.setPath(path, false)
+        startMeasurer.setPath(start,false)
         val startPos = startMeasurer.getPosition(startMeasurer.length * .77f)
 
         val points = mutableListOf<Offset>()
@@ -101,17 +138,6 @@ private fun MapCanvas(
         }
         val newPoints = points.subList(pathStartFinishLinePoint, points.size)
         newPoints.addAll(points.subList(0, pathStartFinishLinePoint - 1))
-
-        carIdxLapDistPct.split(",").forEach { lapDistPctString ->
-            val lapPercentage = (lapDistPctString.toFloatOrNull() ?: 0f).coerceAtLeast(0f)
-            val progress = floor(newPoints.size * lapPercentage).toInt()
-
-            drawCircle(
-                color = Color.Blue,
-                center = newPoints[progress],
-                radius = 5f
-            )
-        }
 
         drawPath(
             path = path,
@@ -128,31 +154,49 @@ private fun MapCanvas(
             color = Color.Red,
         )
 
-//        drawPath(
-//            path = turns,
-//            color = Color.Black,
-//        )
-
         drawPath(
             path = pitroad,
             color = Color.Blue,
         )
+
+        this.drawContext.canvas.nativeCanvas.apply {
+            carPositions().forEachIndexed { index, position ->
+                val progress = floor(newPoints.size * position).toInt()
+                val offset = newPoints[progress]
+
+                this.drawCircle(
+                    x = offset.x,
+                    y = offset.y,
+                    radius = 5f,
+                    paint = if (index == playerIdx()) playerPainter else otherPainter
+                )
+            }
+        }
     }
 }
 
-private fun getSvgPath(resourcePath: String): String = useResource(resourcePath) { stream ->
-    val svg = stream.bufferedReader().use { it.readText() }
+private fun getSvgPath(resourcePath: String): String {
+    val svg = NativeResourceLoader.load(resourcePath)
     val first = svg.substring(svg.indexOf(" d=") + 4)
     val path = first.split("\"")
-    path[0]
+    return path[0]
 }
 
-private fun getSvgPaths(resourcePath: String): List<String> = useResource(resourcePath) { stream ->
-    val svg = stream.bufferedReader().use { it.readText() }
+private fun getSvgPaths(resourcePath: String): List<String> {
+    val svg = NativeResourceLoader.load(resourcePath)
 
     val first = svg.substring(svg.indexOf(" d=") + 4)
     val path = first.split("\"")
 
 
-    path
+    return path
+}
+
+class NativeResourceLoader {
+    companion object {
+        fun load(path: String): String {
+            return NativeResourceLoader::class.java.getResourceAsStream(path)?.bufferedReader()
+                .use { it?.readText().orEmpty() }
+        }
+    }
 }

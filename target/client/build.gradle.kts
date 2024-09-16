@@ -22,6 +22,7 @@ dependencies {
 
     implementation(compose.desktop.currentOs)
     implementation(libs.compose.material.icons)
+    implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
 
     implementation(projects.core.common)
     implementation(projects.core.native)
