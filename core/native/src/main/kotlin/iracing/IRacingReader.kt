@@ -166,12 +166,40 @@ class IRacingReader {
 
             val value = when (type) {
                 // char, bool
-                0, 1 -> latestPointerBuffer.getChar(offset).toString().toBoolean()
-                2, 3 -> latestPointerBuffer.getInt(offset)
-                4 -> latestPointerBuffer.getFloat(offset)
-                5 -> latestPointerBuffer.getDouble(offset)
-                else -> -1
-            }.toString()
+                0, 1 -> if (count == 1) {
+                    latestPointerBuffer.getChar(offset).toString().toBoolean().toString()
+                } else {
+                    // Read multiple boolean values
+                    List(count) { i ->
+                        latestPointerBuffer.getChar(offset + i * 2).toString().toBoolean() // Each char is 2 bytes
+                    }.joinToString(",")
+                }
+                2, 3 -> if (count == 1) {
+                    latestPointerBuffer.getInt(offset).toString()
+                } else {
+                    // Read multiple int values
+                    IntArray(count) { i ->
+                        latestPointerBuffer.getInt(offset + i * 4) // Each int is 4 bytes
+                    }.joinToString(",")
+                }
+                4 -> if (count == 1) {
+                    latestPointerBuffer.getFloat(offset).toString()
+                } else {
+                    // Read multiple float values
+                    FloatArray(count) { i ->
+                        latestPointerBuffer.getFloat(offset + i * 4) // Each float is 4 bytes
+                    }.joinToString(",")
+                }
+                5 -> if (count == 1) {
+                    latestPointerBuffer.getDouble(offset).toString()
+                } else {
+                    // Read multiple double values
+                    DoubleArray(count) { i ->
+                        latestPointerBuffer.getDouble(offset + i * 8) // Each double is 8 bytes
+                    }.joinToString(",")
+                }
+                else -> "-1"
+            }
 
             telemetryData[name] = TelemetryData(
                 description = desc,
