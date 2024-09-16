@@ -2,7 +2,11 @@ package repository
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.retry
+import io.ktor.client.plugins.timeout
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.http.HttpMethod
@@ -21,6 +25,10 @@ import kotlinx.serialization.json.Json
 object GameDataRepository {
 
     val client = HttpClient(OkHttp) {
+        install(HttpRequestRetry) {
+            retryOnException(retryOnTimeout = true)
+        }
+        install(HttpTimeout)
         install(WebSockets)
         install(ContentNegotiation) {
             json()
@@ -55,6 +63,10 @@ object GameDataRepository {
             port = 8080,
             path = path,
             request = {
+                retry {  }
+                timeout {
+                    socketTimeoutMillis = Long.MAX_VALUE
+                }
                 headers.append("Authorization", "Basic cm9vdDpwYXNz")
             },
         ) {
