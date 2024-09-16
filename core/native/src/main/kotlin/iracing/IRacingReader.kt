@@ -83,7 +83,7 @@ class IRacingReader {
 
         while (true) {
             emit(readTelemetryData())
-            delay(pollingInterval)
+            delay(33)
         }
     }
 
