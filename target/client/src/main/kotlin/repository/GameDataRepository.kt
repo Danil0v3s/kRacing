@@ -63,7 +63,6 @@ object GameDataRepository {
             port = 8080,
             path = path,
             request = {
-                retry {  }
                 timeout {
                     socketTimeoutMillis = Long.MAX_VALUE
                 }
