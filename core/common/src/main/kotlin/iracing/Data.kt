@@ -8,4 +8,5 @@ import kotlinx.serialization.Serializable
 data class IRacingData(
     val telemetry: Map<String, TelemetryData>,
     val session: SessionInfoData,
+    val isConnected: Boolean,
 )

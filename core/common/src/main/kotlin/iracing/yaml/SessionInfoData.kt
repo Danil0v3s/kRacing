@@ -22,11 +22,15 @@
  */
 package iracing.yaml
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class SessionInfoData(
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    var IsConnected: Boolean = false,
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
     var WeekendInfo: WeekendInfoYaml? = null,
 

@@ -4,6 +4,7 @@ package iracing
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.sun.jna.Pointer
@@ -15,7 +16,11 @@ import iracing.yaml.SessionInfoData
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import win32.WindowsService
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -57,7 +62,30 @@ class IRacingReader {
     }
 
     var pollingInterval = 200L
-    val currentData = flow<IRacingData?> {
+
+    val sessionFlow = flow {
+        initialize()
+        var isConnected = false
+        while (true) {
+            try {
+                emit(readSessionInfoData().copy(IsConnected = isConnected))
+            } catch (e: MismatchedInputException) {
+                println(e)
+            } finally {
+                isConnected = windowsService.waitForEvent(eventFile!!)
+            }
+        }
+    }
+
+    val telemetryFlow = flow {
+        initialize()
+        while (true) {
+            emit(readTelemetryData(telemetryPointer!!))
+            delay(pollingInterval)
+        }
+    }
+
+    private suspend fun initialize() {
         while (telemetryPointer == null || eventFile == null) {
             tryOpenMemoryFile()
             if (telemetryPointer == null || eventFile == null) {
@@ -65,21 +93,6 @@ class IRacingReader {
                 delay(1_000L)
             } else {
                 println("Connected to iRacing")
-            }
-        }
-
-        while (true) {
-            try {
-                emit(
-                    IRacingData(
-                        telemetry = readTelemetryData(telemetryPointer!!),
-                        session = readSessionInfoData()
-                    )
-                )
-//                windowsService.waitForEvent(eventFile!!)
-                delay(pollingInterval)
-            } catch (e: CancellationException) {
-                break
             }
         }
     }
@@ -174,6 +187,7 @@ class IRacingReader {
                         latestPointerBuffer.getChar(offset + i * 2).toString().toBoolean() // Each char is 2 bytes
                     }.joinToString(",")
                 }
+
                 2, 3 -> if (count == 1) {
                     latestPointerBuffer.getInt(offset).toString()
                 } else {
@@ -182,6 +196,7 @@ class IRacingReader {
                         latestPointerBuffer.getInt(offset + i * 4) // Each int is 4 bytes
                     }.joinToString(",")
                 }
+
                 4 -> if (count == 1) {
                     latestPointerBuffer.getFloat(offset).toString()
                 } else {
@@ -190,6 +205,7 @@ class IRacingReader {
                         latestPointerBuffer.getFloat(offset + i * 4) // Each float is 4 bytes
                     }.joinToString(",")
                 }
+
                 5 -> if (count == 1) {
                     latestPointerBuffer.getDouble(offset).toString()
                 } else {
@@ -198,6 +214,7 @@ class IRacingReader {
                         latestPointerBuffer.getDouble(offset + i * 8) // Each double is 8 bytes
                     }.joinToString(",")
                 }
+
                 else -> "-1"
             }
 

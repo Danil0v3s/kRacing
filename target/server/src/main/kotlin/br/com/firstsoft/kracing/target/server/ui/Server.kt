@@ -57,6 +57,7 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.send
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 
 data class ServerState(
     val isRunning: Boolean = false,
@@ -299,7 +300,13 @@ private fun Application.extracted(
     routing {
         authenticate("auth-basic") {
             webSocket("/telemetry") {
-                reader.currentData.filterNotNull()
+                combine(reader.sessionFlow, reader.telemetryFlow) { session, telemetry ->
+                    IRacingData(
+                        telemetry = telemetry,
+                        session = session,
+                        isConnected = session.IsConnected
+                    )
+                }
                     .catch {
                         println(it)
                     }

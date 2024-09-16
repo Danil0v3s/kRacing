@@ -28,7 +28,7 @@ class WindowsService {
     }
 
     suspend fun waitForEvent(handle: HANDLE) = suspendCancellableCoroutine {
-        val result = Kernel32Impl.KERNEL_32.WaitForSingleObject(handle, INFINITE)
+        val result = Kernel32Impl.KERNEL_32.WaitForSingleObject(handle, 1000)
         it.resume(result != WinBase.WAIT_OBJECT_0)
     }
 
