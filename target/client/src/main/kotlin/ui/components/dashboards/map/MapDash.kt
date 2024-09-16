@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.asSkiaPath
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.vector.toPath
 import androidx.compose.ui.res.useResource
 import androidx.compose.ui.text.TextLayoutInput
 import androidx.compose.ui.text.TextLayoutResult
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import iracing.IRacingData
 import iracing.LapDistPct
+import kotlin.math.floor
 
 @Composable
 fun MapDash(data: IRacingData) {
@@ -90,10 +92,22 @@ private fun MapCanvas(trackId: String, lapPercentage: Float, modifier: Modifier 
         pitroad.translate(secondTranslateOffset)
 
         val measurer = PathMeasure().apply { setPath(path, false) }
-//        val percentage = (0.43f - lapPercentage).mod(1f)
+        val startMeasurer = PathMeasure().apply { setPath(start, false) }
+        val startPos = startMeasurer.getPosition(startMeasurer.length * .77f)
+
+        val points = mutableListOf<Offset>()
+        for (i in 0..1000) {
+            points.add(measurer.getPosition(measurer.length * (i / 1000f)))
+        }
+        val pathStartFinishLinePoint =
+            points.indexOfFirst { ((it.y - startPos.y) - (it.x - startPos.x)).let { it > 0f && it < 0.1f } }
+        val newPoints = points.subList(pathStartFinishLinePoint, points.size)
+        newPoints.addAll(points.subList(0, pathStartFinishLinePoint - 1))
+
         val percentage = lapPercentage
-        val progress = measurer.length * percentage
-        path.addOval(Rect(measurer.getPosition(progress), 5f))
+        val progress = floor(newPoints.size * percentage).toInt()
+        path.addOval(Rect(newPoints[progress], 5f))
+
         drawText(rememberTextMeasurer, "$trackId -> $percentage% - $progress")
 
         drawPath(

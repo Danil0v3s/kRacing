@@ -1770,6 +1770,24 @@ val IRacingData.dpFuelAutoFillActive: Float
     get() = this.telemetry["dpFuelAutoFillActive"]?.value?.toFloatOrNull() ?: 0f
 
 /**
+ * In car traction control active
+ */
+val IRacingData.dcTractionControlToggle: Boolean
+    get() = this.telemetry["dcTractionControlToggle"]?.value?.toBooleanStrictOrNull() ?: false
+
+/**
+ * In car traction control adjustment
+ */
+val IRacingData.dcTractionControl: Float
+    get() = this.telemetry["dcTractionControl"]?.value?.toFloatOrNull() ?: 0f
+
+/**
+ * In car abs adjustment
+ */
+val IRacingData.dcABS: Float
+    get() = this.telemetry["dcABS"]?.value?.toFloatOrNull() ?: 0f
+
+/**
  * In car momentarily turn on wipers
  */
 val IRacingData.dcTriggerWindshieldWipers: Boolean

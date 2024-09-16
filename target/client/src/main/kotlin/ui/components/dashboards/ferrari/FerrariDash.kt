@@ -23,7 +23,9 @@ import iracing.RRtempCL
 import iracing.RRtempCM
 import iracing.RRtempCR
 import iracing.Speed
+import iracing.dcABS
 import iracing.dcBrakeBias
+import iracing.dcTractionControl
 import iracing.dpLFTireColdPress
 import iracing.dpLRTireColdPress
 import iracing.dpRFTireColdPress
@@ -185,15 +187,15 @@ private fun GridPadScope.FifthRow(telemetry: IRacingData) {
         Cell(title = "PED", content = "1")
     }
     item(row = 4, column = 2) {
-        val tc = telemetry.telemetry["dcTractionControl"]?.value?.toFloat()?.roundToInt()
+        val tc = telemetry.dcTractionControl.roundToInt()
         Cell(title = "TC 1", content = tc.toString())
     }
     item(row = 4, column = 3) {
-        val tc = telemetry.telemetry["dcTractionControl"]?.value?.toFloat()?.roundToInt()
+        val tc = telemetry.dcTractionControl.roundToInt()
         Cell(title = "TC 2", content = tc.toString())
     }
     item(row = 4, column = 4) {
-        val abs = telemetry.telemetry["dcABS"]?.value?.toFloat()?.roundToInt()
+        val abs = telemetry.dcABS.roundToInt()
         Cell(title = "ABS", content = abs.toString())
     }
     item(row = 4, column = 5) {
