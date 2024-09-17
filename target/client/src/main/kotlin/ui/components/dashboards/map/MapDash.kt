@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Paint
@@ -24,10 +28,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asSkiaPath
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import iracing.CarIdxLapDistPct
@@ -142,13 +150,16 @@ private fun MapCanvas(
     val measurer = remember(trackId()) { PathMeasure().apply { setPath(path, false) } }
     val startMeasurer = remember(trackId()) { PathMeasure().apply { setPath(start, false) } }
 
-    Canvas(modifier = modifier) {
+    val newPoints = remember { mutableStateOf<List<Offset>>(emptyList()) }
+    val size = remember { mutableStateOf(Size.Zero) }
+
+    LaunchedEffect(trackId(), size) {
         val bounds = path.asSkiaPath().bounds
         val matrix = Matrix()
-        val scaleFactor = size.width / bounds.width
+        val scaleFactor = size.value.width / bounds.width
 
         val translateOffset = Offset(-bounds.left, -bounds.top)
-        val secondTranslateOffset = Offset(0f, (size.height - (scaleFactor * bounds.height)) / 2f)
+        val secondTranslateOffset = Offset(0f, (size.value.height - (scaleFactor * bounds.height)) / 2f)
 
         matrix.scale(scaleFactor, scaleFactor)
 
@@ -176,9 +187,15 @@ private fun MapCanvas(
             .filter { it.second > 0f }.minByOrNull { it.second }!!.first
         val pathStartFinishLinePoint = points.indexOf(closestPoint)
 
-        val newPoints = points.subList(pathStartFinishLinePoint, points.size)
-        newPoints.addAll(points.subList(0, pathStartFinishLinePoint - 1))
+        val np = points.subList(pathStartFinishLinePoint, points.size)
+        np.addAll(points.subList(0, pathStartFinishLinePoint - 1))
 
+        newPoints.value = np
+    }
+
+    Canvas(modifier = modifier.onSizeChanged {
+        size.value = it.toSize()
+    }.scale(0.9f)) {
         drawPath(
             path = path,
             color = Color.White,
@@ -199,23 +216,29 @@ private fun MapCanvas(
             color = Color.Cyan,
         )
 
+        if (newPoints.value.isEmpty()) {
+            return@Canvas
+        }
+
         this.drawContext.canvas.nativeCanvas.apply {
             val standings = carStandings()
             val player = playerIdx()
+            val style = TextStyle(color = Color.Black)
             carPositions().forEachIndexed { index, position ->
                 val rawPosition = if (isTrackClockwise) (1f - position).mod(1f) else position
-                val progress = floor(newPoints.size * rawPosition).toInt()
-                val offset = newPoints[progress]
+                val progress = floor(newPoints.value.size * rawPosition).toInt()
+                val offset = newPoints.value[progress]
                 val playerStanding = standings[player]
+                val standing = standings[index]
 
                 this.drawCircle(
                     x = offset.x,
                     y = offset.y,
-                    radius = 5f,
+                    radius = 8f,
                     paint = when {
                         index == player -> playerPainter
                         index != player -> {
-                            if (standings[index] > playerStanding) {
+                            if (standing > playerStanding) {
                                 aheadPainter
                             } else {
                                 behindPainter
@@ -225,6 +248,13 @@ private fun MapCanvas(
                         else -> otherPainter
                     }
                 )
+
+//                this@Canvas.drawText(
+//                    textMeasurer = textMeasurer,
+//                    text = standing.toString(),
+//                    topLeft = Offset(offset.x - 4, offset.y-9),
+//                    style = style
+//                )
             }
         }
     }
