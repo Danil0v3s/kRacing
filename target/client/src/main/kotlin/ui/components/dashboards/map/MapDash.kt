@@ -1,13 +1,22 @@
 package ui.components.dashboards.map
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,7 +43,10 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,6 +55,9 @@ import iracing.CarIdxPosition
 import iracing.IRacingData
 import iracing.PlayerCarIdx
 import repository.GameDataRepository
+import ui.components.Cell
+import ui.components.grid.GridPad
+import ui.components.grid.GridPadCells
 import java.util.regex.Pattern
 import kotlin.math.floor
 
@@ -59,10 +74,10 @@ fun MapDash(viewModel: DashViewModel = viewModel()) {
     val telemetryData = viewModel.telemetry.collectAsState(IRacingData.Disconnected)
     val sessionData = viewModel.sessionData.collectAsState(IRacingData.Disconnected)
 
-    val trackId by remember {
+    val weekendInfo by remember {
         derivedStateOf {
             when (val data = sessionData.value) {
-                is IRacingData.Session -> data.session.WeekendInfo?.TrackID
+                is IRacingData.Session -> data.session.WeekendInfo
                 else -> null
             }
         }
@@ -76,12 +91,13 @@ fun MapDash(viewModel: DashViewModel = viewModel()) {
         }
     }
 
-    if (trackId == null || telemetry == null) {
+    if (weekendInfo == null || telemetry == null) {
         return
     }
 
     Content(
-        trackId = { trackId ?: "" },
+        trackId = { weekendInfo!!.TrackID },
+        trackTitle = { weekendInfo!!.TrackDisplayShortName },
         carPositions = {
             telemetry!!.CarIdxLapDistPct.split(",").map { pctString ->
                 (pctString.toFloatOrNull() ?: 0f).coerceAtLeast(0f)
@@ -101,26 +117,101 @@ fun MapDash(viewModel: DashViewModel = viewModel()) {
 @Composable
 private fun Content(
     trackId: () -> String,
+    trackTitle: () -> String,
     carPositions: () -> List<Float>,
     playerIdx: () -> Int,
     carStandings: () -> List<Int>,
     modifier: Modifier = Modifier,
 ) {
-
-    Row(
-        modifier = modifier.background(Color.Black),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    GridPad(
+        cells = GridPadCells(rowCount = 5, columnCount = 5),
+        modifier = Modifier
+            .background(Color.Black)
+            .fillMaxSize()
     ) {
-        MapCanvas(
-            trackId = trackId,
-            carPositions = carPositions,
-            playerIdx = playerIdx,
-            carStandings = carStandings,
-            modifier = Modifier.width(400.dp).aspectRatio(1 / 1f)
-        )
-        Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        item(row = 0, column = 0, rowSpan = 3, columnSpan = 2) {
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .padding(4.dp)
+            ) {
 
+                Box(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center)
+                        .border(BorderStroke(2.dp, Color.White))
+                )
+
+                Text(
+                    text = trackTitle(),
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight(450),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .background(Color.Black)
+                        .padding(horizontal = 6.dp)
+                        .offset(y = (-4).dp)
+                )
+
+                MapCanvas(
+                    trackId = trackId,
+                    carPositions = carPositions,
+                    playerIdx = playerIdx,
+                    carStandings = carStandings,
+                    modifier = Modifier.align(Alignment.Center).width(200.dp)
+                )
+            }
+        }
+
+        item(row = 0, column = 2, rowSpan = 3, columnSpan = 1) {
+            Cell(content = "N", fontSize = 128.sp, modifier = Modifier.background(Color.Red))
+        }
+
+        item(row = 0, column = 3) {
+            Cell("Speed", content = "0")
+        }
+
+        item(row = 0, column = 4) {
+            Cell("ABS") {
+
+            }
+        }
+
+        item(row = 1, column = 3, columnSpan = 2) {
+            Cell(title = "Lap Time", content = "0:00.000")
+        }
+
+        item(row = 2, column = 3) {
+            Cell(title = "Lap Delta", content = "0:00.000")
+        }
+
+        item(row = 2, column = 4) {
+            Cell(title = "Opt Time", content = "0:00.000")
+        }
+
+        item(row = 3, column = 0, columnSpan = 3, rowSpan = 2) {
+            Cell("Relatives") {
+
+            }
+        }
+
+        item(row = 3, column = 3) {
+            Cell(title = "Brake Bias", content = "4.32")
+        }
+
+        item(row = 3, column = 4) {
+            Cell(title = "Fuel", content = "4L")
+        }
+
+        item(row = 4, column = 3) {
+            Cell(title = "Position", content = "1")
+        }
+
+        item(row = 4, column = 4) {
+            Cell(title = "Fuel", content = "4L")
         }
     }
 }
@@ -195,7 +286,7 @@ private fun MapCanvas(
 
     Canvas(modifier = modifier.onSizeChanged {
         size.value = it.toSize()
-    }.scale(0.9f)) {
+    }) {
         drawPath(
             path = path,
             color = Color.White,

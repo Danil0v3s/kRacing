@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -66,5 +67,44 @@ fun Cell(
                 modifier = Modifier.align(Alignment.Center)
             )
         }
+    }
+}
+
+@Composable
+fun Cell(
+    title: String? = null,
+    backgroundColor: Color = Color.Black,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit
+) {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .padding(4.dp)
+    ) {
+
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .align(Alignment.Center)
+                .border(BorderStroke(2.dp, if (backgroundColor == Color.White) Color.Black else Color.White))
+        )
+
+        if (title != null) {
+            Text(
+                text = title,
+                color = if (backgroundColor == Color.White) Color.Black else Color.White,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight(450),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .background(backgroundColor)
+                    .padding(horizontal = 6.dp)
+                    .offset(y = (-4).dp)
+            )
+        }
+
+        content()
     }
 }

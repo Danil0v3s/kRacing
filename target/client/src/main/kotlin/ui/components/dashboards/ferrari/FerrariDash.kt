@@ -82,6 +82,10 @@ fun FerrariDash() {
         }
     }
 
+    if (telemetry == null) {
+        return
+    }
+
     GridPad(
         cells = GridPadCells(rowCount = 5, columnCount = 6),
         modifier = Modifier.background(Color.Black)
