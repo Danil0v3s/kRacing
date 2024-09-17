@@ -3,26 +3,30 @@ package iracing
 import iracing.telemetry.TelemetryData
 import iracing.yaml.SessionInfoData
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
 @Serializable
 sealed class IRacingData {
-    abstract val type: IRacingDataType
+    abstract val dataType: IRacingDataType
 
     @Serializable
     data class Telemetry(
-        override val type: IRacingDataType = IRacingDataType.Telemetry,
+        override val dataType: IRacingDataType = IRacingDataType.Telemetry,
         val telemetry: Map<String, TelemetryData>
     ) : IRacingData()
 
     @Serializable
     data class Session(
-        override val type: IRacingDataType = IRacingDataType.Session,
+        override val dataType: IRacingDataType = IRacingDataType.Session,
         val session: SessionInfoData,
     ) : IRacingData()
 
     @Serializable
     data object Disconnected : IRacingData() {
-        override val type: IRacingDataType
+        override val dataType: IRacingDataType
             get() = IRacingDataType.Disconnected
     }
 }
@@ -30,3 +34,12 @@ sealed class IRacingData {
 enum class IRacingDataType {
     Disconnected, Telemetry, Session
 }
+
+val module = SerializersModule {
+    polymorphic(IRacingData::class) {
+        subclass(IRacingData.Telemetry::class)
+        subclass(IRacingData.Session::class)
+        subclass(IRacingData.Disconnected::class)
+    }
+}
+val formatter = Json { serializersModule = module }

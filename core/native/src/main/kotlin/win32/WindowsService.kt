@@ -27,9 +27,8 @@ class WindowsService {
         return memMapFile
     }
 
-    suspend fun waitForEvent(handle: HANDLE) = suspendCancellableCoroutine {
-        val result = Kernel32Impl.KERNEL_32.WaitForSingleObject(handle, 1000)
-        it.resume(result != WinBase.WAIT_OBJECT_0)
+    fun waitForEvent(handle: HANDLE): Boolean {
+        return Kernel32Impl.KERNEL_32.WaitForSingleObject(handle, 500) == WinBase.WAIT_OBJECT_0
     }
 
     fun closeHandle(handle: WinNT.HANDLE) {

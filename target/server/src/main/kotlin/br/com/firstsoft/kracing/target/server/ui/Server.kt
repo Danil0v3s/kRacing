@@ -56,8 +56,10 @@ import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.send
+import iracing.formatter
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 data class ServerState(
     val isRunning: Boolean = false,
@@ -302,21 +304,19 @@ private fun Application.extracted(
             webSocket("/session") {
                 reader
                     .sessionFlow
-                    .collect { data ->
-                        send(Json.encodeToString(data))
-                    }
+                    .catch { println(it) }
+                    .map { formatter.encodeToString(it) }
+                    .collect(::send)
             }
+
             webSocket("/telemetry") {
                 val queryParams = call.request.queryParameters
                 reader.telemetryFilter.addAll(queryParams["filter"]?.split(",").orEmpty())
                 reader
                     .telemetryFlow
-                    .catch {
-                        println(it)
-                    }
-                    .collect { data ->
-                        send(Json.encodeToString(data))
-                    }
+                    .catch { println(it) }
+                    .map { formatter.encodeToString(it) }
+                    .collect(::send)
             }
         }
     }

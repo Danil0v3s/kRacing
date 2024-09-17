@@ -14,6 +14,7 @@ import iracing.MAHMSizes.IRSDK_MAX_STRING
 import iracing.telemetry.TelemetryData
 import iracing.telemetry.TelemetryVarHeader
 import iracing.yaml.SessionInfoData
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
@@ -62,41 +63,55 @@ class IRacingReader {
     var pollingInterval = 200L
 
     val sessionFlow = flow {
-        initialize()
-        var isConnected = false
-        while (true) {
-            try {
-                emit(readSessionInfoData().copy(IsConnected = isConnected))
-            } catch (e: MismatchedInputException) {
-                println(e)
-            } finally {
-                isConnected = windowsService.waitForEvent(eventFile!!)
+        try {
+            while (!initialize()) {
+                emit(IRacingData.Disconnected)
+                delay(1_000L)
             }
+
+            var isConnected = false
+
+            while (true) {
+                try {
+                    val data = if (!isConnected) {
+                        IRacingData.Disconnected
+                    } else {
+                        IRacingData.Session(session = readSessionInfoData())
+                    }
+                    emit(data)
+                } catch (e: MismatchedInputException) {
+                    println(e)
+                } finally {
+                    isConnected = windowsService.waitForEvent(eventFile!!)
+                }
+            }
+        } catch (e: CancellationException) {
+            println("Finishing session flow")
         }
     }
 
     var telemetryFilter = mutableListOf<String>()
     val telemetryFlow = flow {
-        initialize()
-        // emit first time from build
-        emit(buildTelemetryDataLookup())
+        try {
+            initialize()
 
-        while (true) {
-            emit(readTelemetryData())
-            delay(33)
+            buildTelemetryDataLookup()
+
+            while (true) {
+                emit(IRacingData.Telemetry(telemetry = readTelemetryData()))
+                delay(33)
+            }
+        } catch (e: CancellationException) {
+            println("Finishing telemetry flow")
         }
     }
 
-    private suspend fun initialize() {
-        while (telemetryPointer == null || eventFile == null) {
+    private fun initialize(): Boolean {
+        if (telemetryPointer == null || eventFile == null) {
             tryOpenMemoryFile()
-            if (telemetryPointer == null || eventFile == null) {
-                println("Couldn't connect to iRacing. Delaying 1 second")
-                delay(1_000L)
-            } else {
-                println("Connected to iRacing")
-            }
         }
+
+        return telemetryPointer != null && eventFile != null
     }
 
     fun stopPolling() {
@@ -128,23 +143,23 @@ class IRacingReader {
         return readHeader(buffer)
     }
 
-    private fun buildTelemetryDataLookup(): Map<String, TelemetryData> {
-        val pointer = telemetryPointer ?: return emptyMap()
+    private fun buildTelemetryDataLookup() {
+        val pointer = telemetryPointer ?: return
         val header = readHeader(pointer)
         this.header = header
         val latestPointerBuffer = header.getLatestVarByteBuffer(pointer)
-        val telemetryData = buildTelemetryDataLookup(header, pointer, latestPointerBuffer)
-
-        return telemetryData
+        buildTelemetryDataLookup(header, pointer, latestPointerBuffer)
     }
 
     private fun readSessionInfoData(): SessionInfoData {
         if (header == null || telemetryPointer == null) {
             tryOpenMemoryFile()
-            this.header = readHeader(telemetryPointer!!)
         }
+        val pointer = telemetryPointer ?: return SessionInfoData(IsConnected = false)
+        val header = readHeader(pointer)
+        this.header = header
         val sessionInfoData =
-            readSessionInfoData(getByteBuffer(telemetryPointer!!, header!!.sessionInfoLen, header!!.sessionInfoOffset))
+            readSessionInfoData(getByteBuffer(pointer, header.sessionInfoLen, header.sessionInfoOffset))
 
         return sessionInfoData
     }
