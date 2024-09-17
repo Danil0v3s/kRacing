@@ -2,11 +2,35 @@ package iracing.telemetry
 
 enum class CarRadar(val value: Int) {
     LROff(0),
+
+    /**
+     *  no cars around us.
+     */
     LRClear(1),
+
+    /**
+     * there is a car to our left.
+     */
     LRCarLeft(2),
+
+    /**
+     * there is a car to our right.
+     */
     LRCarRight(3),
+
+    /**
+     * there are cars on each side.
+     */
     LRCarLeftRight(4),
+
+    /**
+     * there are two cars to our left.
+     */
     LR2CarsLeft(5),
+
+    /**
+     * there are two cars to our right.
+     */
     LR2CarsRight(6);
 
     companion object {

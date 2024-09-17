@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -50,20 +51,51 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import iracing.BrakeABSactive
 import iracing.CarIdxLapDistPct
 import iracing.CarIdxPosition
+import iracing.CarLeftRight
+import iracing.FuelLevel
+import iracing.Gear
 import iracing.IRacingData
+import iracing.LapCurrentLapTime
+import iracing.LapDeltaToSessionBestLap
+import iracing.LapLastLapTime
 import iracing.PlayerCarIdx
+import iracing.PlayerCarPosition
+import iracing.Speed
+import iracing.dcABS
+import iracing.dcBrakeBias
+import iracing.telemetry.CarRadar
+import iracing.yaml.WeekendInfoYaml
 import repository.GameDataRepository
 import ui.components.Cell
 import ui.components.grid.GridPad
 import ui.components.grid.GridPadCells
+import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 import kotlin.math.floor
+import kotlin.time.Duration
+import kotlin.time.toDurationUnit
 
 class DashViewModel : ViewModel() {
 
-    private val filters = listOf("CarIdxLapDistPct", "PlayerCarIdx", "CarIdxPosition")
+    private val filters = listOf(
+        "CarIdxLapDistPct",
+        "PlayerCarIdx",
+        "CarIdxPosition",
+        "Gear",
+        "Speed",
+        "BrakeABSactive",
+        "LapLastLapTime",
+        "LapDeltaToSessionBestLap",
+        "LapCurrentLapTime",
+        "dcBrakeBias",
+        "FuelLevel",
+        "PlayerCarPosition",
+        "CarLeftRight",
+        "dcABS",
+    )
     val telemetry = GameDataRepository.telemetry(filters)
     val sessionData = GameDataRepository.session()
 
@@ -96,8 +128,7 @@ fun MapDash(viewModel: DashViewModel = viewModel()) {
     }
 
     Content(
-        trackId = { weekendInfo!!.TrackID },
-        trackTitle = { weekendInfo!!.TrackDisplayShortName },
+        weekendInfo = { weekendInfo!! },
         carPositions = {
             telemetry!!.CarIdxLapDistPct.split(",").map { pctString ->
                 (pctString.toFloatOrNull() ?: 0f).coerceAtLeast(0f)
@@ -109,6 +140,7 @@ fun MapDash(viewModel: DashViewModel = viewModel()) {
             }
         },
         playerIdx = { telemetry!!.PlayerCarIdx },
+        telemetry = { telemetry!! },
         modifier = Modifier.fillMaxSize()
     )
 
@@ -116,11 +148,11 @@ fun MapDash(viewModel: DashViewModel = viewModel()) {
 
 @Composable
 private fun Content(
-    trackId: () -> String,
-    trackTitle: () -> String,
+    weekendInfo: () -> WeekendInfoYaml,
     carPositions: () -> List<Float>,
     playerIdx: () -> Int,
     carStandings: () -> List<Int>,
+    telemetry: () -> IRacingData.Telemetry,
     modifier: Modifier = Modifier,
 ) {
     GridPad(
@@ -145,7 +177,7 @@ private fun Content(
                 )
 
                 Text(
-                    text = trackTitle(),
+                    text = weekendInfo().TrackDisplayShortName,
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight(450),
@@ -157,7 +189,7 @@ private fun Content(
                 )
 
                 MapCanvas(
-                    trackId = trackId,
+                    trackId = { weekendInfo().TrackID },
                     carPositions = carPositions,
                     playerIdx = playerIdx,
                     carStandings = carStandings,
@@ -167,51 +199,177 @@ private fun Content(
         }
 
         item(row = 0, column = 2, rowSpan = 3, columnSpan = 1) {
-            Cell(content = "N", fontSize = 128.sp, modifier = Modifier.background(Color.Red))
+            val gear = when (val gearValue = telemetry().Gear.toInt()) {
+                0 -> "N"
+                -1 -> "R"
+                else -> gearValue.toString()
+            }
+            Cell(content = gear, fontSize = 128.sp, modifier = Modifier.background(Color.Red))
         }
 
         item(row = 0, column = 3) {
-            Cell("Speed", content = "0")
+            val speedMs = telemetry().Speed
+            val speedKms = floor(speedMs * 3.6f).toInt().toString()
+            Cell("Speed", content = speedKms)
         }
 
         item(row = 0, column = 4) {
             Cell("ABS") {
-
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                        .background(if (telemetry().BrakeABSactive) Color(0x00ff00ff) else Color.Black)
+                )
             }
         }
 
         item(row = 1, column = 3, columnSpan = 2) {
-            Cell(title = "Lap Time", content = "0:00.000")
+            Duration.parse("${telemetry().LapCurrentLapTime}s").toComponents { minutes, seconds, nanoseconds ->
+                val millis = "${nanoseconds / 1000}".take(3)
+                Cell(title = "Lap Time", content = "${String.format("%02d", minutes)}:${String.format("%02d", seconds)}.${millis}")
+            }
+
         }
 
         item(row = 2, column = 3) {
-            Cell(title = "Lap Delta", content = "0:00.000")
+            Cell(title = "Lap Delta", content = telemetry().LapDeltaToSessionBestLap.toString())
         }
 
         item(row = 2, column = 4) {
-            Cell(title = "Opt Time", content = "0:00.000")
+            Duration.parse("${telemetry().LapCurrentLapTime}s").toComponents { minutes, seconds, nanoseconds ->
+                val millis = "${nanoseconds / 1000}".take(3)
+                Cell(title = "Last Time", content = "${minutes}:${seconds}.${millis}")
+            }
         }
 
-        item(row = 3, column = 0, columnSpan = 3, rowSpan = 2) {
+        item(row = 3, column = 0, columnSpan = 2, rowSpan = 2) {
             Cell("Relatives") {
 
             }
         }
 
+        item(row = 3, column = 2, rowSpan = 2) {
+            val radar = telemetry().CarLeftRight
+
+            Cell("Radar") {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+
+                    drawRoundRect(
+                        color = Color.White,
+                        topLeft = Offset(center.x - 10f, center.y - 20f),
+                        size = Size(20f, 40f),
+                        cornerRadius = CornerRadius(10f, 10f),
+                        alpha = 0.5f
+                    )
+
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(center.x, 10f),
+                        end = Offset(center.x, 140f),
+                        alpha = 0.5f,
+                    )
+
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(30f, center.y - 40),
+                        end = Offset(size.width - 30f, center.y - 40),
+                        alpha = 0.5f,
+                    )
+
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(15f, center.y),
+                        end = Offset(size.width - 15f, center.y),
+                        alpha = 0.5f,
+                    )
+
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(30f, center.y + 40),
+                        end = Offset(size.width - 30f, center.y + 40),
+                        alpha = 0.5f,
+                    )
+
+                    when (radar) {
+                        CarRadar.LRCarLeft -> {
+                            drawCircle(
+                                color = Color.Red,
+                                alpha = 0.8f,
+                                radius = 10f,
+                                center = Offset(center.x - 25f, center.y),
+                            )
+                        }
+                        CarRadar.LRCarRight -> {
+                            drawCircle(
+                                color = Color.Red,
+                                alpha = 0.8f,
+                                radius = 10f,
+                                center = Offset(center.x + 25f, center.y),
+                            )
+                        }
+                        CarRadar.LRCarLeftRight -> {
+                            drawCircle(
+                                color = Color.Red,
+                                alpha = 0.8f,
+                                radius = 10f,
+                                center = Offset(center.x - 25f, center.y),
+                            )
+                            drawCircle(
+                                color = Color.Red,
+                                alpha = 0.8f,
+                                radius = 10f,
+                                center = Offset(center.x + 25f, center.y),
+                            )
+                        }
+                        CarRadar.LR2CarsLeft -> {
+                            drawCircle(
+                                color = Color.Red,
+                                alpha = 0.8f,
+                                radius = 10f,
+                                center = Offset(center.x - 25f, center.y),
+                            )
+                            drawCircle(
+                                color = Color.Red,
+                                alpha = 0.8f,
+                                radius = 10f,
+                                center = Offset(center.x - 50f, center.y),
+                            )
+                        }
+                        CarRadar.LR2CarsRight -> {
+                            drawCircle(
+                                color = Color.Red,
+                                alpha = 0.8f,
+                                radius = 10f,
+                                center = Offset(center.x + 25f, center.y),
+                            )
+                            drawCircle(
+                                color = Color.Red,
+                                alpha = 0.8f,
+                                radius = 10f,
+                                center = Offset(center.x + 50f, center.y),
+                            )
+                        }
+                        else -> Unit
+                    }
+
+
+                }
+            }
+        }
+
         item(row = 3, column = 3) {
-            Cell(title = "Brake Bias", content = "4.32")
+            Cell(title = "Brake Bias", content = telemetry().dcBrakeBias.toString())
         }
 
         item(row = 3, column = 4) {
-            Cell(title = "Fuel", content = "4L")
+            Cell(title = "ABS", content = telemetry().dcABS.toString())
         }
 
         item(row = 4, column = 3) {
-            Cell(title = "Position", content = "1")
+            Cell(title = "Position", content = telemetry().PlayerCarPosition.toString())
         }
 
         item(row = 4, column = 4) {
-            Cell(title = "Fuel", content = "4L")
+            Cell(title = "Fuel", content = telemetry().FuelLevel.toString())
         }
     }
 }
