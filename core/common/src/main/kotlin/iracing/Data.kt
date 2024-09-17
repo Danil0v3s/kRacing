@@ -2,44 +2,33 @@ package iracing
 
 import iracing.telemetry.TelemetryData
 import iracing.yaml.SessionInfoData
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.PolymorphicSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
 sealed class IRacingData {
-    abstract val dataType: IRacingDataType
 
     @Serializable
     data class Telemetry(
-        override val dataType: IRacingDataType = IRacingDataType.Telemetry,
         val telemetry: Map<String, TelemetryData>
     ) : IRacingData()
 
     @Serializable
     data class Session(
-        override val dataType: IRacingDataType = IRacingDataType.Session,
         val session: SessionInfoData,
     ) : IRacingData()
 
     @Serializable
-    data object Disconnected : IRacingData() {
-        override val dataType: IRacingDataType
-            get() = IRacingDataType.Disconnected
-    }
+    data object Disconnected : IRacingData()
 }
 
-enum class IRacingDataType {
-    Disconnected, Telemetry, Session
-}
-
-val module = SerializersModule {
-    polymorphic(IRacingData::class) {
-        subclass(IRacingData.Telemetry::class)
-        subclass(IRacingData.Session::class)
-        subclass(IRacingData.Disconnected::class)
-    }
-}
-val formatter = Json { serializersModule = module }

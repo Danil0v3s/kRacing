@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,7 +34,6 @@ import iracing.CarIdxLapDistPct
 import iracing.CarIdxPosition
 import iracing.IRacingData
 import iracing.PlayerCarIdx
-import iracing.yaml.SessionInfoData
 import repository.GameDataRepository
 import java.util.regex.Pattern
 import kotlin.math.floor
@@ -48,27 +48,43 @@ class DashViewModel : ViewModel() {
 
 @Composable
 fun MapDash(viewModel: DashViewModel = viewModel()) {
+    val telemetryData = viewModel.telemetry.collectAsState(IRacingData.Disconnected)
+    val sessionData = viewModel.sessionData.collectAsState(IRacingData.Disconnected)
 
-    val telemetry by viewModel.telemetry.collectAsState(IRacingData.Telemetry(telemetry = emptyMap()))
-    val sessionData by viewModel.sessionData.collectAsState(SessionInfoData())
+    val trackId by remember {
+        derivedStateOf {
+            when (val data = sessionData.value) {
+                is IRacingData.Session -> data.session.WeekendInfo?.TrackID
+                else -> null
+            }
+        }
+    }
+    val telemetry by remember {
+        derivedStateOf {
+            when (val data = telemetryData.value) {
+                is IRacingData.Telemetry -> data
+                else -> null
+            }
+        }
+    }
 
-    if (sessionData.WeekendInfo?.TrackID == null) {
+    if (trackId == null || telemetry == null) {
         return
     }
 
     Content(
-        trackId = { sessionData.WeekendInfo?.TrackID ?: "" },
+        trackId = { trackId ?: "" },
         carPositions = {
-            telemetry.CarIdxLapDistPct.split(",").map { pctString ->
+            telemetry!!.CarIdxLapDistPct.split(",").map { pctString ->
                 (pctString.toFloatOrNull() ?: 0f).coerceAtLeast(0f)
             }
         },
         carStandings = {
-            telemetry.CarIdxPosition.split(",").map { pctString ->
+            telemetry!!.CarIdxPosition.split(",").map { pctString ->
                 (pctString.toIntOrNull() ?: 0).coerceAtLeast(0)
             }
         },
-        playerIdx = { telemetry.PlayerCarIdx },
+        playerIdx = { telemetry!!.PlayerCarIdx },
         modifier = Modifier.fillMaxSize()
     )
 
@@ -83,7 +99,7 @@ private fun Content(
     modifier: Modifier = Modifier,
 ) {
 
-    Row (
+    Row(
         modifier = modifier.background(Color.Black),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -93,9 +109,9 @@ private fun Content(
             carPositions = carPositions,
             playerIdx = playerIdx,
             carStandings = carStandings,
-            modifier = Modifier.width(400.dp).aspectRatio(1/1f)
+            modifier = Modifier.width(400.dp).aspectRatio(1 / 1f)
         )
-        Column (modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
 
         }
     }
@@ -184,25 +200,28 @@ private fun MapCanvas(
         )
 
         this.drawContext.canvas.nativeCanvas.apply {
+            val standings = carStandings()
+            val player = playerIdx()
             carPositions().forEachIndexed { index, position ->
                 val rawPosition = if (isTrackClockwise) (1f - position).mod(1f) else position
                 val progress = floor(newPoints.size * rawPosition).toInt()
                 val offset = newPoints[progress]
-                val playerStanding = carStandings()[playerIdx()]
+                val playerStanding = standings[player]
 
                 this.drawCircle(
                     x = offset.x,
                     y = offset.y,
                     radius = 5f,
                     paint = when {
-                        index == playerIdx() -> playerPainter
-                        index != playerIdx() -> {
-                            if (carStandings()[index] > playerStanding) {
+                        index == player -> playerPainter
+                        index != player -> {
+                            if (standings[index] > playerStanding) {
                                 aheadPainter
                             } else {
                                 behindPainter
                             }
                         }
+
                         else -> otherPainter
                     }
                 )

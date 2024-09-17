@@ -1,6 +1,7 @@
 package ui
 
 import Label
+import PreferencesRepository
 import Title
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,17 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import io.ktor.server.engine.ApplicationEngineEnvironment
-import io.ktor.server.engine.EngineConnectorConfig
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import io.ktor.server.netty.NettyApplicationEngine
-import iracing.IRacingData
-import iracing.IRacingReader
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import PreferencesRepository
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.ApplicationStopped
@@ -52,14 +42,22 @@ import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.UserIdPrincipal
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.basic
+import io.ktor.server.engine.ApplicationEngineEnvironment
+import io.ktor.server.engine.EngineConnectorConfig
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.netty.NettyApplicationEngine
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.send
-import iracing.formatter
+import iracing.IRacingData
+import iracing.IRacingReader
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 data class ServerState(
     val isRunning: Boolean = false,
@@ -305,7 +303,8 @@ private fun Application.extracted(
                 reader
                     .sessionFlow
                     .catch { println(it) }
-                    .map { formatter.encodeToString(it) }
+                    .distinctUntilChanged()
+                    .map { Json.encodeToString(it) }
                     .collect(::send)
             }
 
@@ -315,7 +314,8 @@ private fun Application.extracted(
                 reader
                     .telemetryFlow
                     .catch { println(it) }
-                    .map { formatter.encodeToString(it) }
+                    .distinctUntilChanged()
+                    .map { Json.encodeToString(it) }
                     .collect(::send)
             }
         }

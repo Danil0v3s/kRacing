@@ -91,7 +91,7 @@ class IRacingReader {
     }
 
     var telemetryFilter = mutableListOf<String>()
-    val telemetryFlow = flow {
+    val telemetryFlow = flow<IRacingData> {
         try {
             initialize()
 

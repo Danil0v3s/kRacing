@@ -5,7 +5,6 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.retry
 import io.ktor.client.plugins.timeout
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
@@ -14,8 +13,6 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import iracing.IRacingData
-import iracing.telemetry.TelemetryData
-import iracing.yaml.SessionInfoData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -35,21 +32,20 @@ object GameDataRepository {
         }
     }
 
-    fun telemetry(filters: List<String>): Flow<IRacingData.Telemetry> = flow {
+    fun telemetry(filters: List<String>): Flow<IRacingData> = flow {
         webSocket("/telemetry?filter=${filters.joinToString(",")}") {
             try {
-                val data = Json.decodeFromString<Map<String, TelemetryData>>(it)
-                emit(IRacingData.Telemetry(telemetry = data))
+                emit(Json.decodeFromString<IRacingData>(it))
             } catch (e: Exception) {
                 println(e)
             }
         }
     }.flowOn(Dispatchers.IO)
 
-    fun session(): Flow<SessionInfoData> = flow {
+    fun session(): Flow<IRacingData> = flow {
         webSocket("/session") {
             try {
-                emit(Json.decodeFromString<SessionInfoData>(it))
+                emit(Json.decodeFromString<IRacingData>(it))
             } catch (e: Exception) {
                 println(e)
             }

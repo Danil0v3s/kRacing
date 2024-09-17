@@ -3,6 +3,7 @@ package ui.components.dashboards.ferrari
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -71,17 +72,25 @@ fun FerrariDash() {
             "dcBrakeBias",
         )
     }
-    val telemetry by GameDataRepository.telemetry(filters).collectAsState(IRacingData.Telemetry(telemetry = emptyMap()))
+    val telemetryData by GameDataRepository.telemetry(filters).collectAsState(IRacingData.Disconnected)
+    val telemetry by remember {
+        derivedStateOf {
+            when (val data = telemetryData) {
+                is IRacingData.Telemetry -> data
+                else -> null
+            }
+        }
+    }
 
     GridPad(
         cells = GridPadCells(rowCount = 5, columnCount = 6),
         modifier = Modifier.background(Color.Black)
     ) {
-        FirstRow(telemetry)
-        SecondRow(telemetry)
-        ThirdRow(telemetry)
-        FourthRow(telemetry)
-        FifthRow(telemetry)
+        FirstRow(telemetry!!)
+        SecondRow(telemetry!!)
+        ThirdRow(telemetry!!)
+        FourthRow(telemetry!!)
+        FifthRow(telemetry!!)
     }
 }
 
