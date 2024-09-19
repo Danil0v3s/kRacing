@@ -235,7 +235,7 @@ private fun Content(
         }
 
         item(row = 2, column = 4) {
-            Duration.parse("${telemetry().LapCurrentLapTime}s").toComponents { minutes, seconds, nanoseconds ->
+            Duration.parse("${telemetry().LapLastLapTime}s").toComponents { minutes, seconds, nanoseconds ->
                 val millis = "${nanoseconds / 1000}".take(3)
                 Cell(title = "Last Time", content = "${String.format("%02d", minutes)}:${String.format("%02d", seconds)}.${millis}")
             }
