@@ -17,7 +17,7 @@ import repository.GameDataRepository
 import ui.components.dashboards.MainDashboard
 
 class AppViewModel : ViewModel() {
-    val filters = remember { listOf("RPM") }
+    val filters = listOf("RPM")
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
