@@ -231,13 +231,13 @@ private fun Content(
         }
 
         item(row = 2, column = 3) {
-            Cell(title = "Lap Delta", content = telemetry().LapDeltaToSessionBestLap.toString())
+            Cell(title = "Lap Delta", content = String.format("%06.3f", telemetry().LapDeltaToSessionBestLap))
         }
 
         item(row = 2, column = 4) {
             Duration.parse("${telemetry().LapCurrentLapTime}s").toComponents { minutes, seconds, nanoseconds ->
                 val millis = "${nanoseconds / 1000}".take(3)
-                Cell(title = "Last Time", content = "${minutes}:${seconds}.${millis}")
+                Cell(title = "Last Time", content = "${String.format("%02d", minutes)}:${String.format("%02d", seconds)}.${millis}")
             }
         }
 
@@ -357,7 +357,7 @@ private fun Content(
         }
 
         item(row = 3, column = 3) {
-            Cell(title = "Brake Bias", content = telemetry().dcBrakeBias.toString())
+            Cell(title = "Brake Bias", content = String.format("%.1f", telemetry().dcBrakeBias))
         }
 
         item(row = 3, column = 4) {
@@ -365,11 +365,11 @@ private fun Content(
         }
 
         item(row = 4, column = 3) {
-            Cell(title = "Position", content = telemetry().PlayerCarPosition.toString())
+            Cell(title = "Position", content = telemetry().PlayerCarPosition.toInt().toString())
         }
 
         item(row = 4, column = 4) {
-            Cell(title = "Fuel", content = telemetry().FuelLevel.toString())
+            Cell(title = "Fuel", content = String.format("%.1f", telemetry().FuelLevel))
         }
     }
 }
