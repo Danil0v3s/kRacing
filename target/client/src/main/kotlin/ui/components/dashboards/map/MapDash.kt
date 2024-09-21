@@ -22,8 +22,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -33,10 +35,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asSkiaPath
+import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.nativeCanvas
@@ -46,11 +50,13 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import iracing.Brake
 import iracing.BrakeABSactive
 import iracing.CarIdxLapDistPct
 import iracing.CarIdxPosition
@@ -64,6 +70,7 @@ import iracing.LapLastLapTime
 import iracing.PlayerCarIdx
 import iracing.PlayerCarPosition
 import iracing.Speed
+import iracing.Throttle
 import iracing.dcABS
 import iracing.dcBrakeBias
 import iracing.telemetry.CarRadar
@@ -95,6 +102,8 @@ class DashViewModel : ViewModel() {
         "PlayerCarPosition",
         "CarLeftRight",
         "dcABS",
+        "Throttle",
+        "Brake"
     )
     val telemetry = GameDataRepository.telemetry(filters)
     val sessionData = GameDataRepository.session()
@@ -225,7 +234,10 @@ private fun Content(
         item(row = 1, column = 3, columnSpan = 2) {
             Duration.parse("${telemetry().LapCurrentLapTime}s").toComponents { minutes, seconds, nanoseconds ->
                 val millis = "${nanoseconds / 1000}".take(3)
-                Cell(title = "Lap Time", content = "${String.format("%02d", minutes)}:${String.format("%02d", seconds)}.${millis}")
+                Cell(
+                    title = "Lap Time",
+                    content = "${String.format("%02d", minutes)}:${String.format("%02d", seconds)}.${millis}"
+                )
             }
 
         }
@@ -237,13 +249,16 @@ private fun Content(
         item(row = 2, column = 4) {
             Duration.parse("${telemetry().LapLastLapTime}s").toComponents { minutes, seconds, nanoseconds ->
                 val millis = "${nanoseconds / 1000}".take(3)
-                Cell(title = "Last Time", content = "${String.format("%02d", minutes)}:${String.format("%02d", seconds)}.${millis}")
+                Cell(
+                    title = "Last Time",
+                    content = "${String.format("%02d", minutes)}:${String.format("%02d", seconds)}.${millis}"
+                )
             }
         }
 
         item(row = 3, column = 0, columnSpan = 2, rowSpan = 2) {
-            Cell("Relatives") {
-
+            Cell("Input") {
+                InputCanvas(telemetry())
             }
         }
 
@@ -298,6 +313,7 @@ private fun Content(
                                 center = Offset(center.x - 25f, center.y),
                             )
                         }
+
                         CarRadar.LRCarRight -> {
                             drawCircle(
                                 color = Color.Red,
@@ -306,6 +322,7 @@ private fun Content(
                                 center = Offset(center.x + 25f, center.y),
                             )
                         }
+
                         CarRadar.LRCarLeftRight -> {
                             drawCircle(
                                 color = Color.Red,
@@ -320,6 +337,7 @@ private fun Content(
                                 center = Offset(center.x + 25f, center.y),
                             )
                         }
+
                         CarRadar.LR2CarsLeft -> {
                             drawCircle(
                                 color = Color.Red,
@@ -334,6 +352,7 @@ private fun Content(
                                 center = Offset(center.x - 50f, center.y),
                             )
                         }
+
                         CarRadar.LR2CarsRight -> {
                             drawCircle(
                                 color = Color.Red,
@@ -348,6 +367,7 @@ private fun Content(
                                 center = Offset(center.x + 50f, center.y),
                             )
                         }
+
                         else -> Unit
                     }
 
@@ -506,6 +526,57 @@ private fun MapCanvas(
 //                )
             }
         }
+    }
+}
+
+@Composable
+private fun InputCanvas(
+    telemetry: IRacingData.Telemetry
+) {
+    val brakePoints = remember { mutableStateListOf<Float>() }
+    val throttlePoints = remember { mutableStateListOf<Float>() }
+
+    val brakePath = remember { Path() }
+    val throttlePath = remember { Path() }
+
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    fun moveLine(path: Path, index: Int, value: Float) {
+        val x = canvasSize.width.toFloat() * (1f / 20 * (index + 1))
+        val y = (canvasSize.height.toFloat() * value)
+
+        path.lineTo(
+            x = x,
+            y = y,
+        )
+    }
+
+    LaunchedEffect(telemetry) {
+        brakePoints.add(telemetry.Brake)
+        throttlePoints.add(telemetry.Throttle)
+        if (brakePoints.size > 20) brakePoints.removeFirst()
+        if (throttlePoints.size > 20) throttlePoints.removeFirst()
+
+        throttlePath.reset()
+        throttlePath.moveTo(0f, canvasSize.height.toFloat() * (1f-(throttlePoints.firstOrNull() ?: 1f)))
+        brakePath.reset()
+        brakePath.moveTo(0f, canvasSize.height.toFloat() * (1f-(brakePoints.firstOrNull() ?: 1f)))
+
+        throttlePoints.forEachIndexed { index, value ->
+            moveLine(throttlePath, index, 1f - value)
+        }
+        brakePoints.forEachIndexed { index, value ->
+            moveLine(brakePath, index, 1f - value)
+        }
+    }
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .onSizeChanged { canvasSize = it }
+    ) {
+        drawPath(brakePath, Color.Red.copy(alpha = 0.8f), style = Stroke())
+        drawPath(throttlePath, Color.Green.copy(alpha = 0.8f), style = Stroke())
     }
 }
 
