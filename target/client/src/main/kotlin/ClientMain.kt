@@ -11,7 +11,7 @@ fun main() = application {
     val icon = painterResource("imgs/logo.svg")
     val state = rememberWindowState().apply {
         size = DpSize(800.dp, 480.dp)
-        placement = WindowPlacement.Floating
+        placement = WindowPlacement.Fullscreen
     }
 
     Window(
@@ -21,7 +21,7 @@ fun main() = application {
         visible = true,
         title = "kMonitor",
         resizable = false,
-        undecorated = false,
+        undecorated = true,
     ) {
         App()
     }
