@@ -576,8 +576,8 @@ private fun InputCanvas(
             .background(Color.Black)
             .onSizeChanged { canvasSize = it }
     ) {
-        drawPath(brakePath, Color.Red.copy(alpha = 0.8f), style = Stroke())
-        drawPath(throttlePath, Color.Green.copy(alpha = 0.8f), style = Stroke())
+        drawPath(brakePath, Color.Red.copy(alpha = 0.8f), style = Stroke(width = 3f))
+        drawPath(throttlePath, Color.Green.copy(alpha = 0.8f), style = Stroke(width = 3f))
     }
 }
 
