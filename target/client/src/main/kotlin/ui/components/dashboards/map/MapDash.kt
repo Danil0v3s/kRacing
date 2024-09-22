@@ -22,26 +22,33 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.NativeCanvas
+import androidx.compose.ui.graphics.NativePaint
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asSkiaPath
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -536,19 +543,24 @@ private fun InputCanvas(
     val listSize = 30
     val brakePoints = remember { mutableStateListOf<Float>() }
     val throttlePoints = remember { mutableStateListOf<Float>() }
-
-    val brakePath = remember { Path() }
-    val throttlePath = remember { Path() }
-
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    fun moveLine(path: Path, index: Int, value: Float) {
-        val x = canvasSize.width.toFloat() * (1f / listSize * (index + 1))
-        val y = (canvasSize.height.toFloat() * value)
 
-        path.lineTo(
-            x = x,
-            y = y,
-        )
+    val throttlePaint = remember {
+        Paint().asFrameworkPaint().apply {
+            isAntiAlias = true
+            color = Color.Green.toArgb()
+            strokeWidth = 3f
+            blendMode = org.jetbrains.skia.BlendMode.PLUS
+        }
+    }
+
+    val brakePaint = remember {
+        Paint().asFrameworkPaint().apply {
+            isAntiAlias = true
+            color = Color.Red.toArgb()
+            strokeWidth = 3f
+            blendMode = org.jetbrains.skia.BlendMode.PLUS
+        }
     }
 
     LaunchedEffect(telemetry) {
@@ -556,29 +568,42 @@ private fun InputCanvas(
         throttlePoints.add(telemetry.Throttle)
         if (brakePoints.size > listSize) brakePoints.removeFirst()
         if (throttlePoints.size > listSize) throttlePoints.removeFirst()
-
-        throttlePath.reset()
-        throttlePath.moveTo(0f, canvasSize.height.toFloat() * (1f - (throttlePoints.firstOrNull() ?: 1f)))
-        brakePath.reset()
-        brakePath.moveTo(0f, canvasSize.height.toFloat() * (1f - (brakePoints.firstOrNull() ?: 1f)))
-
-        throttlePoints.forEachIndexed { index, value ->
-            moveLine(throttlePath, index, 1f - value)
-        }
-        brakePoints.forEachIndexed { index, value ->
-            moveLine(brakePath, index, 1f - value)
-        }
     }
 
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .onSizeChanged { canvasSize = it }
-    ) {
-        drawPath(brakePath, Color.Red.copy(alpha = 0.8f), style = Stroke(width = 3f))
-        drawPath(throttlePath, Color.Green.copy(alpha = 0.8f), style = Stroke(width = 3f))
-    }
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)
+        .onSizeChanged { canvasSize = it }
+        .drawWithContent {
+            val throttleZip = throttlePoints.zipWithNext()
+            val brakeZip = brakePoints.zipWithNext()
+
+            drawIntoCanvas { canvas ->
+                canvas.nativeCanvas.apply {
+                    throttleZip.forEachIndexed { index, pair ->
+                        drawLine(canvasSize, listSize, index, pair, throttlePaint)
+                    }
+                    brakeZip.forEachIndexed { index, pair ->
+                        drawLine(canvasSize, listSize, index, pair, brakePaint)
+                    }
+                }
+
+            }
+        })
+}
+
+private fun NativeCanvas.drawLine(
+    canvasSize: IntSize,
+    listSize: Int,
+    index: Int,
+    pair: Pair<Float, Float>,
+    throttlePaint: NativePaint
+) {
+    this.drawLine(
+        x0 = canvasSize.width.toFloat() * (1f / listSize * (index)),
+        y0 = (canvasSize.height.toFloat() * (1f - pair.first)),
+        x1 = canvasSize.width.toFloat() * (1f / listSize * (index + 1)),
+        y1 = (canvasSize.height.toFloat() * (1f - pair.second)),
+        paint = throttlePaint
+    )
 }
 
 private fun getSvgPath(resourcePath: String): String {
