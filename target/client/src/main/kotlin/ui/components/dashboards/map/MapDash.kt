@@ -533,6 +533,7 @@ private fun MapCanvas(
 private fun InputCanvas(
     telemetry: IRacingData.Telemetry
 ) {
+    val listSize = 30
     val brakePoints = remember { mutableStateListOf<Float>() }
     val throttlePoints = remember { mutableStateListOf<Float>() }
 
@@ -541,7 +542,7 @@ private fun InputCanvas(
 
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     fun moveLine(path: Path, index: Int, value: Float) {
-        val x = canvasSize.width.toFloat() * (1f / 20 * (index + 1))
+        val x = canvasSize.width.toFloat() * (1f / listSize * (index + 1))
         val y = (canvasSize.height.toFloat() * value)
 
         path.lineTo(
@@ -553,13 +554,13 @@ private fun InputCanvas(
     LaunchedEffect(telemetry) {
         brakePoints.add(telemetry.Brake)
         throttlePoints.add(telemetry.Throttle)
-        if (brakePoints.size > 20) brakePoints.removeFirst()
-        if (throttlePoints.size > 20) throttlePoints.removeFirst()
+        if (brakePoints.size > listSize) brakePoints.removeFirst()
+        if (throttlePoints.size > listSize) throttlePoints.removeFirst()
 
         throttlePath.reset()
-        throttlePath.moveTo(0f, canvasSize.height.toFloat() * (1f-(throttlePoints.firstOrNull() ?: 1f)))
+        throttlePath.moveTo(0f, canvasSize.height.toFloat() * (1f - (throttlePoints.firstOrNull() ?: 1f)))
         brakePath.reset()
-        brakePath.moveTo(0f, canvasSize.height.toFloat() * (1f-(brakePoints.firstOrNull() ?: 1f)))
+        brakePath.moveTo(0f, canvasSize.height.toFloat() * (1f - (brakePoints.firstOrNull() ?: 1f)))
 
         throttlePoints.forEachIndexed { index, value ->
             moveLine(throttlePath, index, 1f - value)
