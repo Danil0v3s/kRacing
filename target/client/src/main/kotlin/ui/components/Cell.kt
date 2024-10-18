@@ -105,7 +105,7 @@ fun Cell(
             )
         }
 
-        Box(modifier = Modifier.fillMaxSize().padding(4.dp).padding(top = 15.dp)) {
+        Box(modifier = Modifier.fillMaxSize().padding(4.dp)) {
             content()
         }
     }

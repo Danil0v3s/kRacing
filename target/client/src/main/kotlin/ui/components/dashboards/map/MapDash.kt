@@ -220,7 +220,29 @@ private fun Content(
                 -1 -> "R"
                 else -> gearValue.toString()
             }
-            Cell(content = gear, fontSize = 128.sp, modifier = Modifier.background(Color.Red))
+            val speedMs = telemetry().Speed
+            val speedKms = floor(speedMs * 3.6f).toInt().toString()
+//            Cell(content = gear, fontSize = 128.sp, modifier = Modifier.background(Color.Red))
+            Cell {
+                Column(modifier = Modifier.fillMaxSize().background(Color.Red),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = gear,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight(800),
+                        fontSize = 128.sp,
+                    )
+                    Text(
+                        text = speedKms,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight(600),
+                        fontSize = 56.sp,
+                    )
+                }
+            }
         }
 
         item(row = 0, column = 3) {
